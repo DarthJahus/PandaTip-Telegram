@@ -1,4 +1,4 @@
--*- coding: utf-8 -*-
+#-*- coding: utf-8 -*-
 
 import json
 import codecs
@@ -19,7 +19,7 @@ logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s
 
 def commands(bot, update):
 	user = update.message.from_user.username 
-	bot.send_message(chat_id=update.message.chat_id, text="Initiating commands /tip & /withdraw have a specfic format,\n use them like so:" + "\n \n Parameters: \n <user> = target user to tip \n <amount> = amount of reddcoin to utilise \n <address> = reddcoin address to withdraw to \n \n Tipping format: \n /tip <user> <amount> \n \n Withdrawing format: \n /withdraw <address> <amount>")
+	bot.send_message(chat_id=update.message.chat_id, text="Initiating commands /tip & /withdraw have a specfic format,\n use them like so:" + "\n \n Parameters: \n <user> = target user to tip \n <amount> = amount of pandacoin to utilise \n <address> = pandacoin address to withdraw to \n \n Tipping format: \n /tip <user> <amount> \n \n Withdrawing format: \n /withdraw <address> <amount>")
 
 def help(bot, update):
 	bot.send_message(chat_id=update.message.chat_id, text="The following commands are at your disposal: /hi , /commands , /deposit , /tip , /withdraw , /price , /marketcap or /balance")
@@ -29,7 +29,7 @@ def deposit(bot, update):
 	if user is None:
 		bot.send_message(chat_id=update.message.chat_id, text="Please set a telegram username in your profile settings!")
 	else:
-		address = "/usr/local/bin/reddcoind"
+		address = "/usr/local/bin/pandacoind"
 		result = subprocess.run([address,"getaccountaddress",user],stdout=subprocess.PIPE)
 		clean = (result.stdout.strip()).decode("utf-8")
 		bot.send_message(chat_id=update.message.chat_id, text="@{0} your depositing address is: {1}".format(user,clean))
@@ -42,13 +42,13 @@ def tip(bot,update):
 	if user is None:
 		bot.send_message(chat_id=update.message.chat_id, text="Please set a telegram username in your profile settings!")
 	else:
-		machine = "@Reddcoin_bot"
+		machine = "@Pandacoin_bot"
 		if target == machine:
 			bot.send_message(chat_id=update.message.chat_id, text="HODL.")
 		elif "@" in target:
 			target = target[1:]
 			user = update.message.from_user.username 
-			core = "/usr/local/bin/reddcoind"
+			core = "/usr/local/bin/pandacoind"
 			result = subprocess.run([core,"getbalance",user],stdout=subprocess.PIPE)
 			balance = float((result.stdout.strip()).decode("utf-8"))
 			amount = float(amount)
@@ -60,12 +60,12 @@ def tip(bot,update):
 				balance = str(balance)
 				amount = str(amount) 
 				tx = subprocess.run([core,"move",user,target,amount],stdout=subprocess.PIPE)
-				bot.send_message(chat_id=update.message.chat_id, text="@{0} tipped @{1} of {2} RDD".format(user, target, amount))
+				bot.send_message(chat_id=update.message.chat_id, text="@{0} tipped @{1} {2} PND".format(user, target, amount))
 		else: 
 			bot.send_message(chat_id=update.message.chat_id, text="Error that user is not applicable.")
 
 def balance(bot,update):
-	quote_page = requests.get('https://www.worldcoinindex.com/coin/reddcoin')
+	quote_page = requests.get('https://www.worldcoinindex.com/coin/pandacoin')
 	strainer = SoupStrainer('div', attrs={'class': 'row mob-coin-table'})
 	soup = BeautifulSoup(quote_page.content, 'html.parser', parse_only=strainer)
 	name_box = soup.find('div', attrs={'class':'col-md-6 col-xs-6 coinprice'})
@@ -77,17 +77,17 @@ def balance(bot,update):
 	if user is None:
 		bot.send_message(chat_id=update.message.chat_id, text="Please set a telegram username in your profile settings!")
 	else:
-		core = "/usr/local/bin/reddcoind"
+		core = "/usr/local/bin/pandacoind"
 		result = subprocess.run([core,"getbalance",user],stdout=subprocess.PIPE)
 		clean = (result.stdout.strip()).decode("utf-8")
 		balance  = float(clean)
 		fiat_balance = balance * price
 		fiat_balance = str(round(fiat_balance,3))
 		balance =  str(round(balance,3))
-		bot.send_message(chat_id=update.message.chat_id, text="@{0} your current balance is: {1} RDD ≈  ${2}".format(user,balance,fiat_balance))
+		bot.send_message(chat_id=update.message.chat_id, text="@{0} your current balance is: {1} PND ≈  ${2}".format(user,balance,fiat_balance))
 
 def price(bot,update):
-	quote_page = requests.get('https://www.worldcoinindex.com/coin/reddcoin')
+	quote_page = requests.get('https://www.worldcoinindex.com/coin/pandacoin')
 	strainer = SoupStrainer('div', attrs={'class': 'row mob-coin-table'})
 	soup = BeautifulSoup(quote_page.content, 'html.parser', parse_only=strainer)
 	name_box = soup.find('div', attrs={'class':'col-md-6 col-xs-6 coinprice'})
@@ -100,7 +100,7 @@ def price(bot,update):
 	soup = BeautifulSoup(quote_page.content, 'html.parser').text
 	btc = soup[80:]
 	sats = btc[:-2]
-	bot.send_message(chat_id=update.message.chat_id, text="Reddcoin is valued at {0} Δ {1} ≈ {2}".format(price,percent,sats) + " ฿")
+	bot.send_message(chat_id=update.message.chat_id, text="Pandacoin is valued at {0} Δ {1} ≈ {2}".format(price,percent,sats) + " ฿")
 
 def withdraw(bot,update):
 	user = update.message.from_user.username
@@ -112,7 +112,7 @@ def withdraw(bot,update):
 		address = ''.join(str(e) for e in address)
 		target = target.replace(target[:35], '')
 		amount = float(target)
-		core = "/usr/local/bin/reddcoind"
+		core = "/usr/local/bin/pandacoind"
 		result = subprocess.run([core,"getbalance",user],stdout=subprocess.PIPE)
 		clean = (result.stdout.strip()).decode("utf-8")
 		balance = float(clean)
@@ -121,7 +121,7 @@ def withdraw(bot,update):
 		else:
 			amount = str(amount)
 			tx = subprocess.run([core,"sendfrom",user,address,amount],stdout=subprocess.PIPE)
-			bot.send_message(chat_id=update.message.chat_id, text="@{0} has successfully withdrew to address: {1} of {2} RDD" .format(user,address,amount))
+			bot.send_message(chat_id=update.message.chat_id, text="@{0} has successfully withdrew to address: {1} of {2} PND" .format(user,address,amount))
 
 def hi(bot,update):
 	user = update.message.from_user.username
@@ -131,13 +131,13 @@ def moon(bot,update):
   bot.send_message(chat_id=update.message.chat_id, text="Moon mission inbound!")
 
 def marketcap(bot,update):
-	quote_page = requests.get('https://www.worldcoinindex.com/coin/reddcoin')
+	quote_page = requests.get('https://www.worldcoinindex.com/coin/pandacoin')
 	strainer = SoupStrainer('div', attrs={'class': 'row mob-coin-table'})
 	soup = BeautifulSoup(quote_page.content, 'html.parser', parse_only=strainer)
 	name_box = soup.find('div', attrs={'class':'col-md-6 col-xs-6 coin-marketcap'})
 	name = name_box.text.replace("\n","")
 	mc = re.sub(r'\n\s*\n', r'\n\n', name.strip(), flags=re.M)
-	bot.send_message(chat_id=update.message.chat_id, text="The current market cap of Reddcoin is valued at {0}".format(mc))
+	bot.send_message(chat_id=update.message.chat_id, text="The current market cap of Pandacoin is valued at {0}".format(mc))
 
 from telegram.ext import CommandHandler
 
