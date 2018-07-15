@@ -10,6 +10,19 @@
 
 In order to run the tip-bot a Pandacoin-Core client is needed (pandacoind). 
 
+### Configuration file
+
+JSON file
+
+Template:
+    {
+    	"telegram-token": "such:sicret-token",
+    	"telegram-botname": "PandaTip",
+    	"rpc-uri": "http://127.0.0.1:22444",
+    	"rpc-user": "panda",
+    	"rpc-psw": "suchpassword"
+    }
+
 ---
 
 Forked from https://github.com/samgos/reddbot-telegram

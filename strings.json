@@ -1,0 +1,25 @@
+{
+	"welcome": [],
+	"commands": [],
+	"help": {
+		"en": [
+			"Use this bot to send pandacoins to your friends!",
+			"Commands:",
+			" /tip <user> <amount>",
+			" /withdraw <amount> <address>",
+			" /address"
+		],
+		"fr": [
+			"Envoyez des pandacoins à vos amis grâce à ce bot !",
+			"Commandes :",
+			" /tip <utilisateur> <montant>",
+			" /withdraw <montant> <adresse>",
+			" /address"
+		]
+	},
+	"help_public": [],
+	"about": [],
+	"about_public": [],
+	"error_bad_deep_link": [],
+	"error_insufficient_funds": []
+}
