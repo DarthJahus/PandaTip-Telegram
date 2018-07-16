@@ -15,6 +15,7 @@ In order to run the tip-bot a Pandacoin-Core client is needed (pandacoind).
 JSON file
 
 Template:
+
     {
     	"telegram-token": "such:sicret-token",
     	"telegram-botname": "PandaTip",

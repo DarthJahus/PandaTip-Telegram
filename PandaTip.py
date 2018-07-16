@@ -3,14 +3,15 @@
 
 
 import requests
-from bs4 import BeautifulSoup, SoupStrainer
 import re
 import subprocess
 from telegram.ext import Updater
 from telegram.ext import CommandHandler
+from telegram.error import BadRequest
 from telegram import ParseMode
 from PandaRPC import PandaRPC, Wrapper as RPCWrapper
 from HelperFunctions import *
+import sys, traceback
 import logging
 logging.basicConfig(
 	format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
@@ -18,7 +19,7 @@ logging.basicConfig(
 )
 
 config = load_file_json("config.json")
-_lang = "en" # ToDo: Per-user language
+_lang = "fr" # ToDo: Per-user language
 strings = Strings("strings.json")
 
 
@@ -74,8 +75,11 @@ def cmd_about(bot, update):
 			disable_web_page_preview=True
 		)
 	else:
+		# ToDo: Button
 		update.message.reply_text(
-			"%s\n[deeplink](https://telegram.me/%s?start=about)" % (strings.get("about_public", _lang), config["bot_name"]),
+			"%s\n[About %s](https://telegram.me/%s?start=about)" % (
+				strings.get("about_public", _lang), config["telegram-botname"], config["telegram-botname"]
+			),
 			parse_mode=ParseMode.MARKDOWN,
 			disable_web_page_preview=True
 		)
@@ -104,8 +108,9 @@ def cmd_help(bot, update):
 			disable_web_page_preview=True
 		)
 	else:
+		# ToDo: Button
 		update.message.reply_text(
-			"%s\n[deeplink](https://telegram.me/%s?start=help)" % (strings.get("help_public", _lang), config["bot_name"]),
+			"%s\n[Help!](https://telegram.me/%s?start=help)" % (strings.get("help_public", _lang), config["telegram-botname"]),
 			parse_mode=ParseMode.MARKDOWN,
 			disable_web_page_preview=True
 		)
@@ -125,23 +130,23 @@ def deposit(bot, update):
 		_chat_type = "group"
 	# Only show deposit address if it's a private conversation with the bot
 	if _chat_type == "private":
-		chat_id = str(update.effective_chat.id)
+		_user_id = '@' + update.effective_user.username.lower()
+		if _user_id is None: _user_id = str(update.effective_user.id)
 		# _result = subprocess.run([__wallet, "getaccountaddress", chat_id], stdout=subprocess.PIPE)
-		_rpc_call = __wallet_rpc.getaccountaddress(chat_id)
+		_rpc_call = __wallet_rpc.getaccountaddress(_user_id)
 		if not _rpc_call["success"]:
 			print("Error during RPC call.")
 		else:
 			if _rpc_call["result"]["error"] is not None:
 				print("Error: %s" % _rpc_call["result"]["error"])
 			else:
-				_address = json.dumps(_rpc_call["result"]["result"])
+				_address = _rpc_call["result"]["result"]
 				update.message.reply_text(
 					text="Your deposit address is: `%s`" % _address,
 					quote=True,
 					parse_mode=ParseMode.MARKDOWN,
 					disable_web_page_preview=True
 				)
-
 
 
 # Done: Give balance only if a private chat (2018-07-15)
@@ -156,77 +161,138 @@ def balance(bot,update):
 		_chat_type = "group"
 	# Only show balance if it's a private conversation with the bot
 	if _chat_type == "private":
-		chat_id = str(update.effective_chat.id)
+		# See issue "USERNAME1"
+		_user_id = '@' + update.effective_user.username.lower()
+		if _user_id is None: _user_id = str(update.effective_user.id)
 		# get address of user
-		_rpc_call = __wallet_rpc.getaddress(chat_id)
+		_rpc_call = __wallet_rpc.getaccountaddress(_user_id)
 		if not _rpc_call["success"]:
-			print("Error during RPC call.")
+			if _rpc_call["message"] == 404:
+				update.message.reply_text(
+					text="You seem to be a new user.\nIf you want to create an account, please use the command /address",
+					quote=True
+				)
+			else:
+				print("Error during RPC call: %s" % _rpc_call["message"])
 		elif _rpc_call["result"]["error"] is not None:
 			print("Error: %s" % _rpc_call["result"]["error"])
 		else:
-			_address = json.dumps(_rpc_call["result"]["result"])
+			_address = _rpc_call["result"]["result"]
 			_rpc_call = __wallet_rpc.getbalance(_address)
 			if not _rpc_call["success"]:
 				print("Error during RPC call.")
 			elif _rpc_call["result"]["error"] is not None:
 				print("Error: %s" % _rpc_call["result"]["error"])
 			else:
-				_balance = float(json.dumps(_rpc_call["result"]["result"]))
+				_balance = float(_rpc_call["result"]["result"])
 				update.message.reply_text(
-					text="Your balance is: `%.0f PND`" % _balance
+					text="Your balance is: `%.0f PND`" % _balance,
+					parse_mode=ParseMode.MARKDOWN,
+					quote=True
 				)
 
 
-# ToDo: Rewrite the whole logic; use tags instead of parsing usernames
-# ToDo: Allow private tipping if the user can be tagged (@username available)
+# Done: Rewrite the whole logic; use tags instead of parsing usernames (2018-07-15)
+# ToDo: Allow private tipping if the user can be tagged (@username available) (Probably works, now)
 def tip(bot,update):
-	user = update.message.from_user.username
-	target = update.message.text[5:]
-	amount = target.split(" ")[1]
-	target = target.split(" ")[0]
-	if user is None:
-		bot.send_message(chat_id=update.message.chat_id, text="Please set a telegram username in your profile settings!")
+	# /tip <user> <amount>
+	_message = update.effective_message.text
+	_modifier = 0
+	_recipients = {}
+	for entity in update.effective_message.entities:
+		if entity.type == "text_mention":
+			# UserId is unique
+			_username = entity.user.name
+			if str(entity.user.id) not in _recipients:
+				_recipients[str(entity.user.id)] = (_username, entity.offset, entity.length)
+		elif entity.type == "mention":
+			# _username starts with @
+			# _username is unique
+			_username = update.effective_message.text[entity.offset:(entity.offset+entity.length)]
+			if _username not in _recipients:
+				_recipients[_username] = (_username, entity.offset, entity.length)
+		_part = _message[:entity.offset-_modifier]
+		_message = _message[:entity.offset-_modifier] + _message[entity.offset+entity.length-_modifier:]
+		_modifier = entity.offset+entity.length-len(_part)
+	print(_recipients)
+	_amounts = _message.split()
+	# check if amounts are all convertible to float
+	_amounts_float = []
+	try:
+		for _amount in _amounts:
+			_amounts_float.append(float(_amount))
+	except:
+		_amounts_float = []
+	if len(_amounts_float) != len(_recipients):
+		update.message.reply_text(
+			text="There was an error in your tip. Number of recipients needs to be the same as the number of amounts.",
+			quote=True
+		)
 	else:
-		machine = "@Pandacoin_bot"
-		if target == machine:
-			bot.send_message(chat_id=update.message.chat_id, text="HODL.")
-		elif "@" in target:
-			target = target[1:]
-			user = update.message.from_user.username 
-			core = "/usr/local/bin/pandacoind"
-			result = subprocess.run([core,"getbalance",user],stdout=subprocess.PIPE)
-			balance = float((result.stdout.strip()).decode("utf-8"))
-			amount = float(amount)
-			if balance < amount:
-				bot.send_message(chat_id=update.message.chat_id, text="@{0} you have insufficent funds.".format(user))
-			elif target == user:
-				bot.send_message(chat_id=update.message.chat_id, text="You can't tip yourself silly.")
+		# now check if user has enough balance
+		_user_id = '@' + update.effective_user.username.lower()
+		if _user_id is None: _user_id = str(update.effective_user.id)
+		# get address of user
+		_rpc_call = __wallet_rpc.getaccountaddress(_user_id)
+		if not _rpc_call["success"]:
+			if _rpc_call["message"] == 404:
+				update.message.reply_text(
+					text="You seem to be a new user.\nIf you want to create an account, please use the command /address",
+					quote=True
+				)
 			else:
-				balance = str(balance)
-				amount = str(amount) 
-				tx = subprocess.run([core,"move",user,target,amount],stdout=subprocess.PIPE)
-				bot.send_message(chat_id=update.message.chat_id, text="@{0} tipped @{1} {2} PND".format(user, target, amount))
-		else: 
-			bot.send_message(chat_id=update.message.chat_id, text="Error that user is not applicable.")
+				print("Error during RPC call: %s" % _rpc_call["message"])
+		elif _rpc_call["result"]["error"] is not None:
+			print("Error: %s" % _rpc_call["result"]["error"])
+		else:
+			_address = _rpc_call["result"]["result"]
+			_rpc_call = __wallet_rpc.getbalance(_address)
+			if not _rpc_call["success"]:
+				print("Error during RPC call.")
+			elif _rpc_call["result"]["error"] is not None:
+				print("Error: %s" % _rpc_call["result"]["error"])
+			else:
+				_balance = float(_rpc_call["result"]["result"])
+				# Now, finally, check if user has enough funds
+				if sum(_amounts_float) > _balance:
+					update.message.reply_text(
+						text="Sorry, you don't have enough funds for this operation.\nYou need `%.4f PND`" % sum(_amounts_float),
+						quote=True
+					)
+				else:
+					# Now tip
+					i = 0
+					for _recipient in _recipients:
+						if _recipient[0] == '@':
+							# ToDo: Get the id (actually not possible (Bot API 3.6, Feb. 2018)
+							# Using the @username
+							# ToDo: When requesting a new address, if user has a @username, then use that username
+							# Problem: If someone has no username, then later creates one, he loses access to his account
+							# ToDo: Create a /scavenge command that allows people who had UserID to migrate to UserName
+							_recipient_id = _recipient
+						else:
+							_recipient_id = _recipient
+						_rpc_call = __wallet_rpc.move(_user_id, _recipient_id, _amounts_float[i])
+						i += 1
+						if not _rpc_call["success"]:
+							print("Error during RPC call.")
+						elif _rpc_call["result"]["error"] is not None:
+							print("Error: %s" % _rpc_call["result"]["error"])
+						else:
+							print(
+								"%s successfully tipped %s with `%.4f PND`" % (
+									update.effective_user.name, _recipients[_recipient][0], _amounts_float[i]
+								)
+							)
 
 
+# PMh8nM5gCza8fAtwi5VWpBMQeu53MrQe9r
 def price(bot,update):
-	quote_page = requests.get('https://www.worldcoinindex.com/coin/pandacoin')
-	strainer = SoupStrainer('div', attrs={'class': 'row mob-coin-table'})
-	soup = BeautifulSoup(quote_page.content, 'html.parser', parse_only=strainer)
-	name_box = soup.find('div', attrs={'class':'col-md-6 col-xs-6 coinprice'})
-	name = name_box.text.replace("\n","")
-	price = re.sub(r'\n\s*\n', r'\n\n', name.strip(), flags=re.M)
-	fiat = soup.find('span', attrs={'class': ''})
-	kkz = fiat.text.replace("\n","")
-	percent = re.sub(r'\n\s*\n', r'\n\n', kkz.strip(), flags=re.M)
-	quote_page = requests.get('https://bittrex.com/api/v1.1/public/getticker?market=btc-rdd')
-	soup = BeautifulSoup(quote_page.content, 'html.parser').text
-	btc = soup[80:]
-	sats = btc[:-2]
-	bot.send_message(chat_id=update.message.chat_id, text="Pandacoin is valued at {0} Δ {1} ≈ {2}".format(price,percent,sats) + " ฿")
+	# ToDo:
+	pass
 
 
+# ToDo: Revamp withdraw() function
 def withdraw(bot,update):
 	user = update.message.from_user.username
 	if user is None:
@@ -249,6 +315,71 @@ def withdraw(bot,update):
 			bot.send_message(chat_id=update.message.chat_id, text="@{0} has successfully withdrew to address: {1} of {2} PND" .format(user,address,amount))
 
 
+def scavenge(bot, update):
+	if update.effective_chat is None:
+		_chat_type = "private"
+	elif update.effective_chat.type == "private":
+		_chat_type = "private"
+	else:
+		_chat_type = "group"
+	# Only if it's a private conversation with the bot
+	if _chat_type == "private":
+		_username = '@' + update.effective_user.username.lower()
+		if _username is None:
+			update.message.reply_text(
+				text="Sorry, this command is not for you.",
+				quote=True
+			)
+		else:
+			_user_id = str(update.effective_user.id)
+			# Done: Check balance of UserID (2018-07-16)
+			# get address of user
+			_rpc_call = __wallet_rpc.getaccountaddress(_user_id)
+			if not _rpc_call["success"]:
+				if _rpc_call["message"] == 404:
+					update.message.reply_text(
+						text="You had no previous balance stored with your user id (`%s`)." % _user_id,
+						parse_mode=ParseMode.MARKDOWN,
+						quote=True
+					)
+				else:
+					print("Error during RPC call: %s" % _rpc_call["message"])
+			elif _rpc_call["result"]["error"] is not None:
+				print("Error: %s" % _rpc_call["result"]["error"])
+			else:
+				_address = _rpc_call["result"]["result"]
+				_rpc_call = __wallet_rpc.getbalance(_address)
+				if not _rpc_call["success"]:
+					print("Error during RPC call.")
+				elif _rpc_call["result"]["error"] is not None:
+					print("Error: %s" % _rpc_call["result"]["error"])
+				else:
+					_balance = float(_rpc_call["result"]["result"])
+					# ToDo: Move balance from UserID to @username if balance > 0
+					if _balance == 0:
+						update.message.reply_text(
+							text="Your previous account (`%s`) is empty. Nothing to scavenge." % _user_id,
+							parse_mode=ParseMode.MARKDOWN,
+							quote=True
+						)
+					else:
+						# Move the funds from UserID to Username
+						_rpc_call = __wallet_rpc.move(_user_id, _username, _balance)
+						if not _rpc_call["success"]:
+							print("Error during RPC call.")
+						elif _rpc_call["result"]["error"] is not None:
+							print("Error: %s" % _rpc_call["result"]["error"])
+						else:
+							update.message.reply_text(
+								text="Successfully scavenged `%.4f PND` from your previous account (`%s`)" % (_balance, _user_id),
+								parse_mode=ParseMode.MARKDOWN,
+								quote=True
+							)
+
+
+# ToDo: Take tx fee into account
+
+
 def hi(bot,update):
 	user = update.message.from_user.username
 	bot.send_message(chat_id=update.message.chat_id, text="Hello @{0}, how are you doing today?".format(user))
@@ -259,13 +390,8 @@ def moon(bot,update):
 
 
 def marketcap(bot,update):
-	quote_page = requests.get('https://www.worldcoinindex.com/coin/pandacoin')
-	strainer = SoupStrainer('div', attrs={'class': 'row mob-coin-table'})
-	soup = BeautifulSoup(quote_page.content, 'html.parser', parse_only=strainer)
-	name_box = soup.find('div', attrs={'class':'col-md-6 col-xs-6 coin-marketcap'})
-	name = name_box.text.replace("\n","")
-	mc = re.sub(r'\n\s*\n', r'\n\n', name.strip(), flags=re.M)
-	bot.send_message(chat_id=update.message.chat_id, text="The current market cap of Pandacoin is valued at {0}".format(mc))
+	# ToDo:
+	pass
 
 
 if __name__ == "__main__":
@@ -284,6 +410,7 @@ if __name__ == "__main__":
 	dispatcher.add_handler(CommandHandler('deposit', deposit))
 	dispatcher.add_handler(CommandHandler('address', deposit)) # alias for /deposit
 	dispatcher.add_handler(CommandHandler('balance', balance))
+	dispatcher.add_handler(CommandHandler("scavenge", scavenge))
 	# Conversion commands
 	dispatcher.add_handler(CommandHandler('marketcap', marketcap))
 	dispatcher.add_handler(CommandHandler('price', price))

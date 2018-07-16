@@ -1,6 +1,16 @@
 {
-	"welcome": [],
-	"commands": [],
+	"welcome": {
+		"en": [
+			"This is a text placeholder for the welcome message in English."
+		]
+	},
+	
+	"commands": {
+		"en": [
+			"This is a text placeholder for the command list message in English."
+		]
+	},
+	
 	"help": {
 		"en": [
 			"Use this bot to send pandacoins to your friends!",
@@ -17,9 +27,36 @@
 			" /address"
 		]
 	},
-	"help_public": [],
-	"about": [],
-	"about_public": [],
-	"error_bad_deep_link": [],
-	"error_insufficient_funds": []
+	
+	"help_public": {
+		"en": [
+			"You can't ask this in public !",
+			"Please, click the button bellow:"
+		]
+	},
+	
+	"about": {
+		"en": [
+			"This is a text placeholder for the about text in English."
+		]
+	},
+	
+	"about_public": {
+		"en": [
+			"You can't ask this in public !",
+			"Please, click the button bellow:"
+		]
+	},
+	
+	"error_bad_deep_link": {
+		"en": [
+			"Error. Bad deep link."
+		]
+	},
+	
+	"error_insufficient_funds": {
+		"en": [
+			"Error. Insufficient funds."
+		]
+	}
 }

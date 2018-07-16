@@ -13,8 +13,11 @@ class Strings:
 	def __init__(self, file):
 		self.dict = load_file_json(file)
 
-	def get(self, item, lang):
-		return '\n'.join(self.dict[item][lang])
+	def get(self, item, lang, lang_fail_over="en"):
+		if lang not in self.dict[item]:
+			return '\n'.join(self.dict[item][lang_fail_over])
+		else:
+			return '\n'.join(self.dict[item][lang])
 
 
 if __name__ == "__main__":
