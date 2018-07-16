@@ -4,13 +4,11 @@
 			"This is a text placeholder for the welcome message in English."
 		]
 	},
-	
 	"commands": {
 		"en": [
 			"This is a text placeholder for the command list message in English."
 		]
 	},
-	
 	"help": {
 		"en": [
 			"Use this bot to send pandacoins to your friends!",
@@ -27,36 +25,85 @@
 			" /address"
 		]
 	},
-	
 	"help_public": {
 		"en": [
 			"You can't ask this in public !",
 			"Please, click the button bellow:"
 		]
 	},
-	
 	"about": {
 		"en": [
 			"This is a text placeholder for the about text in English."
 		]
 	},
-	
 	"about_public": {
 		"en": [
 			"You can't ask this in public !",
 			"Please, click the button bellow:"
 		]
 	},
-	
 	"error_bad_deep_link": {
 		"en": [
 			"Error. Bad deep link."
 		]
 	},
-	
 	"error_insufficient_funds": {
 		"en": [
 			"Error. Insufficient funds."
+		]
+	},
+	"user_no_address": {
+		"en": [
+			"You seem to be a new user.",
+			"If you want to create an account, please press the button bellow:"
+		]
+	},
+	"user_balance": {
+		"en": [
+			"Your balance is:"
+		]
+	},
+	"user_no_funds": {
+		"en": [
+			"Sorry, you don't have enough funds for this operation.",
+			"You need:"
+		]
+	},
+	"user_address": {
+		"en": [
+			"Your deposit address is:"
+		]
+	},
+	"success_withdraw": {
+		"en": [
+			"Withdrawal made successfully."
+		]
+	},
+	"success_scavenge_1": {
+		"en": [
+			"Successfully scavenged your previous account:"
+		]
+	},
+	"success_scavenge_2": {
+		"en": [
+			"You have received:"
+		]
+	},
+	"scavenge_no_address": {
+		"en": [
+			"Sorry, no account was found for your UserID"
+		]
+	},
+	
+	"success_tip": {
+		"en": [
+			"successfully tipped:"
+		]
+	},
+	
+	"missing_tip_recipient": {
+		"en": [
+			"Some users couldn't be tipped because of errors."
 		]
 	}
 }

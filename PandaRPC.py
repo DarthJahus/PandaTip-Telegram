@@ -56,7 +56,7 @@ def main():
 	_config = load_file_json("config.json") 
 	myPanda = Wrapper(PandaRPC(_config["rpc-uri"], (_config["rpc-user"], _config["rpc-psw"])))
 	# getaccountaddress creates an address if account doesn't exist
-	res = myPanda.getbalance("PLf3m93QhVVZmHJ7SyA4vJv7hWVWQqUT8b")
+	res = myPanda.sendmany("PandaTip", {"@jahus": 5, "1234": 6})
 	if not res["success"]:
 		print("Error: %s" % res["message"])
 	else:
@@ -64,6 +64,7 @@ def main():
 			print("Error: %s" % res["result"]["error"])
 		else:
 			print(json.dumps(res["result"]["result"]))
+	return
 	res = myPanda.getaccountaddress("123456789")
 	if not res["success"]:
 		print("Error: %s" % res["message"])
