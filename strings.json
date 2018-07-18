@@ -63,7 +63,7 @@
 			"Your balance is:"
 		]
 	},
-	"user_no_funds": {
+	"tip_no_funds": {
 		"en": [
 			"Sorry, you don't have enough funds for this operation.",
 			"You need:"
@@ -79,12 +79,12 @@
 			"Withdrawal made successfully."
 		]
 	},
-	"success_scavenge_1": {
+	"scavenge_success_1": {
 		"en": [
-			"Successfully scavenged your previous account:"
+			"Successfully scavenged your previous account"
 		]
 	},
-	"success_scavenge_2": {
+	"scavenge_success_2": {
 		"en": [
 			"You have received:"
 		]
@@ -92,6 +92,11 @@
 	"scavenge_no_address": {
 		"en": [
 			"Sorry, no account was found for your UserID"
+		]
+	},
+	"scavenge_empty": {
+		"en": [
+			"Nothing to scavenge. Your previous account is empty"
 		]
 	},
 	
@@ -103,7 +108,23 @@
 	
 	"missing_tip_recipient": {
 		"en": [
-			"Some users couldn't be tipped because of errors."
+			"Some users couldn't be tipped. Reasons..."
+		]
+	},
+	
+	"error_tip_arguments": {
+		"en": [
+			"There was an error in your tip.",
+			"- All recipients need to be *unique* and *properly tagged*;",
+			"- Amounts have to be *numbers* (not real pandas);",
+			"- Number of recipients needs to be the *same* as the number of provided amounts."
+		]	
+	},
+	
+	"withdraw_no_funds": {
+		"en": [
+			"Sorry, you don't have enough funds for this operation.",
+			"Available for withdrawal:"
 		]
 	}
 }

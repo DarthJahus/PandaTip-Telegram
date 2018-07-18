@@ -2,12 +2,10 @@
 #coding=utf-8
 
 
+import emoji
 import requests
-import re
-import subprocess
 from telegram.ext import Updater
 from telegram.ext import CommandHandler
-from telegram.error import BadRequest
 from telegram import ParseMode
 from PandaRPC import PandaRPC, Wrapper as RPCWrapper
 from HelperFunctions import *
@@ -25,6 +23,9 @@ strings = Strings("strings.json")
 
 # Constants
 __wallet_rpc = RPCWrapper(PandaRPC(config["rpc-uri"], (config["rpc-user"], config["rpc-psw"])))
+
+
+# ToDo: Add service commands like /pause (pauses the bot for everyone), and maybe some commands to check the health of the daemon / wallet.
 
 
 # ToDo: Don't forget to write the strings in strings.json (they are actually empty)
@@ -130,8 +131,11 @@ def deposit(bot, update):
 		_chat_type = "group"
 	# Only show deposit address if it's a private conversation with the bot
 	if _chat_type == "private":
-		_user_id = '@' + update.effective_user.username.lower()
-		if _user_id is None: _user_id = str(update.effective_user.id)
+		_username = update.effective_user.username
+		if _username is None:
+			_user_id = str(update.effective_user.id)
+		else:
+			_user_id = '@' + _username.lower()
 		_address = None
 		_rpc_call = __wallet_rpc.getaddressesbyaccount(_user_id)
 		if not _rpc_call["success"]:
@@ -177,8 +181,11 @@ def balance(bot, update):
 	# Only show balance if it's a private conversation with the bot
 	if _chat_type == "private":
 		# See issue #2 (https://github.com/DarthJahus/PandaTip-Telegram/issues/2)
-		_user_id = '@' + update.effective_user.username.lower()
-		if _user_id is None: _user_id = str(update.effective_user.id)
+		_username = update.effective_user.username
+		if _username is None:
+			_user_id = str(update.effective_user.id)
+		else:
+			_user_id = '@' + _username.lower()
 		# get address of user
 		_rpc_call = __wallet_rpc.getaddressesbyaccount(_user_id)
 		if not _rpc_call["success"]:
@@ -224,42 +231,50 @@ def tip(bot, update):
 	# Get recipients and values
 	_message = update.effective_message.text
 	_modifier = 0
-	_recipients = {}
+	_handled = {}
+	_recipients = []
 	for entity in update.effective_message.entities:
 		if entity.type == "text_mention":
 			# UserId is unique
 			_username = entity.user.name
-			if str(entity.user.id) not in _recipients:
-				_recipients[str(entity.user.id)] = (_username, entity.offset, entity.length)
+			if str(entity.user.id) not in _handled:
+				_handled[str(entity.user.id)] = (_username, entity.offset, entity.length)
+				_recipients.append(str(entity.user.id))
 		elif entity.type == "mention":
 			# _username starts with @
 			# _username is unique
 			_username = update.effective_message.text[entity.offset:(entity.offset+entity.length)].lower()
-			if _username not in _recipients:
-				_recipients[_username] = (_username, entity.offset, entity.length)
+			if _username not in _handled:
+				_handled[_username] = (_username, entity.offset, entity.length)
+				_recipients.append(_username)
 		_part = _message[:entity.offset-_modifier]
 		_message = _message[:entity.offset-_modifier] + _message[entity.offset+entity.length-_modifier:]
 		_modifier = entity.offset+entity.length-len(_part)
-	print(_recipients)
+	print("_handled = %s" % _handled)
+	print("_recipients = %s" % _recipients)
 	_amounts = _message.split()
 	# check if amounts are all convertible to float
 	_amounts_float = []
 	try:
 		for _amount in _amounts:
-			_amounts_float.append(float(_amount))
+			_amounts_float.append(convert_to_float(_amount))
 	except:
 		_amounts_float = []
 	# Make sure number of recipients is the same as number of values
-	if len(_amounts_float) != len(_recipients):
+	if len(_amounts_float) != len(_recipients) or len(_amounts_float) == 0 or len(_recipients) == 0:
 		update.message.reply_text(
-			text="There was an error in your tip. Number of recipients needs to be the same as the number of amounts.",
-			quote=True
+			text=strings.get("error_tip_arguments", _lang),
+			quote=True,
+			parse_mode=ParseMode.MARKDOWN
 		)
 	else:
 		#
 		# Check if user has enough balance
-		_user_id = '@' + update.effective_user.username.lower()
-		if _user_id is None: _user_id = str(update.effective_user.id)
+		_username = update.effective_user.username
+		if _username is None:
+			_user_id = str(update.effective_user.id)
+		else:
+			_user_id = '@' + _username.lower()
 		# get address of user
 		_rpc_call = __wallet_rpc.getaddressesbyaccount(_user_id)
 		if not _rpc_call["success"]:
@@ -288,14 +303,18 @@ def tip(bot, update):
 					# Now, finally, check if user has enough funds (includes tx fee)
 					if sum(_amounts_float) > _balance - max(1, int(len(_recipients)/3)):
 						update.message.reply_text(
-							text="%s `%.0f PND`" % (strings.get("user_no_funds", _lang), sum(_amounts_float)),
-							quote=True
+							text="%s `%.0f PND`" % (strings.get("tip_no_funds", _lang), sum(_amounts_float) + max(1, int(len(_recipients)/3))),
+							quote=True,
+							parse_mode=ParseMode.MARKDOWN
 						)
 					else:
 						# Now create the {recipient_id: amount} dictionary
 						i = 0
 						_tip_dict = {}
 						for _recipient in _recipients:
+							# add "or _recipient == bot.id" to disallow tipping the tip bot
+							if _recipient == _user_id:
+								continue
 							if _recipient[0] == '@':
 								# ToDo: Get the id (actually not possible (Bot API 3.6, Feb. 2018)
 								# See issue #2 (https://github.com/DarthJahus/PandaTip-Telegram/issues/2)
@@ -332,6 +351,9 @@ def tip(bot, update):
 								_tip_dict[_recipient_id] = _amounts_float[i]
 							i += 1
 						#
+						# Check if there are users left to tip
+						if len(_tip_dict) == 0:
+							return
 						# Done: replace .move by .sendfrom or .sendmany (2018-07-16) 
 						# sendfrom <from address or account> <receive address or account> <amount> [minconf=1] [comment] [comment-to]
 						# and
@@ -347,10 +369,10 @@ def tip(bot, update):
 							if len(_tip_dict) != len(_recipients):
 								_suppl = "\n\n_%s_" % strings.get("missing_tip_recipient", _lang)
 							update.message.reply_text(
-								text = "%s %s\n%s\n\n[tx %s](%s)%s" % (
+								text = "*%s* %s\n%s\n\n[tx %s](%s)%s" % (
 									update.effective_user.name,
 									strings.get("success_tip", _lang),
-									(("\n- *%s* with `%.0f PND`" % (_recipient, _tip_dict[_recipient])) for _recipient in _tip_dict),
+									''.join((("\n- `%3.0f PND ` to *%s*" % (_tip_dict[_recipient_id], _handled[_recipient_id][0])) for _recipient_id in _tip_dict)),
 									_tx[:4] + "..." + _tx[-4:],
 									"https://chainz.cryptoid.info/pnd/tx.dws?" + _tx,
 									_suppl
@@ -392,8 +414,11 @@ def withdraw(bot, update, args):
 				quote=True
 			)
 		if _amount is not None and _recipient is not None:
-			_user_id = '@' + update.effective_user.username.lower()
-			if _user_id is None: _user_id = str(update.effective_user.id)
+			_username = update.effective_user.username
+			if _username is None:
+				_user_id = str(update.effective_user.id)
+			else:
+				_user_id = '@' + _username.lower()
 			# get address of user
 			_rpc_call = __wallet_rpc.getaddressesbyaccount(_user_id)
 			if not _rpc_call["success"]:
@@ -419,7 +444,7 @@ def withdraw(bot, update, args):
 						_balance = float(_rpc_call["result"]["result"])
 						if _balance < _amount + 5:
 							update.message.reply_text(
-								text="%s `%.0f PND`" % (strings.get("user_no_funds", _lang), _amount+5),
+								text="%s `%.0f PND`" % (strings.get("withdraw_no_funds", _lang), _amount-5),
 								quote=True,
 								parse_mode=ParseMode.MARKDOWN
 							)
@@ -453,13 +478,14 @@ def scavenge(bot, update):
 		_chat_type = "group"
 	# Only if it's a private conversation with the bot
 	if _chat_type == "private":
-		_username = '@' + update.effective_user.username.lower()
+		_username = update.effective_user.username
 		if _username is None:
 			update.message.reply_text(
 				text="Sorry, this command is not for you.",
 				quote=True
 			)
 		else:
+			_username = '@' + _username.lower()
 			_user_id = str(update.effective_user.id)
 			# Done: Check balance of UserID (2018-07-16)
 			# get address of user
@@ -487,7 +513,7 @@ def scavenge(bot, update):
 						# Done: Move balance from UserID to @username if balance > 5 (2018-07-16)
 						if int(_balance) <= 5:
 							update.message.reply_text(
-								text="Your previous account (`%s`) is empty. Nothing to scavenge." % _user_id,
+								text="%s (`ID %s`)." % (strings.get("scavenge_empty", _lang), _user_id),
 								parse_mode=ParseMode.MARKDOWN,
 								quote=True
 							)
@@ -523,10 +549,10 @@ def scavenge(bot, update):
 									else:
 										_tx = _rpc_call["result"]["result"]
 										update.message.reply_text(
-											text="%s (`%s`)\n%s `%.0f PND`\n[tx %s](%s)" % (
-												strings.get("success_scavenge_1", _lang),
+											text="%s (`%s`).\n%s `%.0f PND`\n[tx %s](%s)" % (
+												strings.get("scavenge_success_1", _lang),
 												_user_id,
-												strings.get("success_scavenge_2", _lang),
+												strings.get("scavenge_success_2", _lang),
 												_balance-5,
 												_tx[:4]+"..."+_tx[-4:],
 												"https://chainz.cryptoid.info/pnd/tx.dws?" + _tx,
@@ -537,24 +563,47 @@ def scavenge(bot, update):
 										)
 
 
+def convert_to_float(text):
+	# with panda feature :D (2018-07-18)
+	try:
+		# try convert to float
+		return float(text)
+	except:
+		# Check if the text is made of pandas
+		if len(text)/2 > 3 or len(text) == 0 or len(text) % 2 != 0:
+			raise ValueError("Can't convert %s to float." % text)
+		else:
+			_panda = emoji.emojize(":panda_face:", use_aliases=True)
+			print(len(text))
+			for i in range(len(text)):
+				if text[i] != _panda[i%2]:
+					raise ValueError("Can't convert %s to float." % text)
+			else:
+				return 10**(int(len(text)/2))
+
+
 # ToDo: Revamp functions bellow
 
 
-def price(bot,update):
+def price(bot, update):
 	# ToDo:
 	pass
 
 
-def hi(bot,update):
+def marketcap(bot, update):
+	pass
+
+
+def hi(bot, update):
 	user = update.message.from_user.username
 	bot.send_message(chat_id=update.message.chat_id, text="Hello @{0}, how are you doing today?".format(user))
 
 
-def moon(bot,update):
-	bot.send_message(chat_id=update.message.chat_id, text="Moon mission inbound!")
+def moon(bot, update):
+	update.message.reply_text(text="Moon mission inbound!")
 
 
-def market_cap(bot,update):
+def market_cap(bot, update):
 	# ToDo:
 	pass
 
