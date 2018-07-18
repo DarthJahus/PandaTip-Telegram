@@ -4,6 +4,7 @@ import requests
 import json
 from functools import partial
 from HelperFunctions import load_file_json
+import urllib3; urllib3.disable_warnings()
 
 
 class MethodMissing:
