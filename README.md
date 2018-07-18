@@ -2,20 +2,21 @@
  
 ### Dependencies 
 
-* `apt-get install python3`
-* `apt-get install python3-pip`
-* `pip3 install beautifulsoup4`
-* `pip3 install python-telegram-bot --upgrade`
+* `apt-get install python-dev`
+* `apt-get install python-pip`
+* `pip install python-telegram-bot --upgrade`
+* `pip install requests`
+* `pip install emoji`
 
 
 In order to run the tip-bot a Pandacoin-Core client is needed (pandacoind). 
 
 ### Configuration file
 
-JSON file
+Create a `config.json` **JSON** file and set up the following parameters:
 
-Template:
-
+(sample)
+ 
     {
     	"telegram-token": "such:sicret-token",
     	"telegram-botname": "PandaTip",
@@ -26,4 +27,10 @@ Template:
 
 ---
 
-Forked from https://github.com/samgos/reddbot-telegram
+### ToDo
+
+- [ ] Per-user language
+- [ ] Add service commands like `/pause` (pauses the bot for everyone), and maybe some commands to check the health of the daemon / wallet.
+- [x] Populate `strings.json`
+- [ ] Show fiat equivalent for balance
+- [ ] Add `/price` and `/marketcap` commands

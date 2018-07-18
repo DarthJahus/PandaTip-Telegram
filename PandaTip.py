@@ -3,13 +3,11 @@
 
 
 import emoji
-import requests
 from telegram.ext import Updater
-from telegram.ext import CommandHandler
-from telegram import ParseMode
+from telegram.ext import CommandHandler, CallbackQueryHandler
+from telegram import ParseMode, InlineKeyboardButton, InlineKeyboardMarkup
 from PandaRPC import PandaRPC, Wrapper as RPCWrapper
 from HelperFunctions import *
-import sys, traceback
 import logging
 logging.basicConfig(
 	format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
@@ -17,7 +15,7 @@ logging.basicConfig(
 )
 
 config = load_file_json("config.json")
-_lang = "fr" # ToDo: Per-user language
+_lang = "en" # ToDo: Per-user language
 strings = Strings("strings.json")
 
 
@@ -46,11 +44,25 @@ def cmd_start(bot, update, args):
 					disable_web_page_preview=True
 				)
 		else:
+			_button_help = InlineKeyboardButton(
+				text=emoji.emojize(strings.get("button_help", _lang), use_aliases=True),
+				callback_data="help"
+			)
+			_button_about = InlineKeyboardButton(
+				text=emoji.emojize(strings.get("button_about", _lang), use_aliases=True),
+				callback_data="about"
+			)
+			_markup = InlineKeyboardMarkup(
+				[
+					[_button_help, _button_about]
+				]
+			)
 			update.message.reply_text(
-				strings.get("welcome", _lang),
+				emoji.emojize(strings.get("welcome", _lang), use_aliases=True),
 				quote=True,
 				parse_mode=ParseMode.MARKDOWN,
-				disable_web_page_preview=True
+				disable_web_page_preview=True,
+				reply_markup=_markup
 			)
 
 
@@ -66,9 +78,10 @@ def cmd_about(bot, update):
 		# Check if callback
 		try:
 			if update.callback_query.data is not None:
-				update.callback_query.answer(strings.get("about", _lang))
+				update.callback_query.answer(strings.get("callback_simple", _lang))
 		except:
 			pass
+		# Answer
 		bot.send_message(
 			chat_id=update.effective_chat.id,
 			text=strings.get("about", _lang),
@@ -76,13 +89,19 @@ def cmd_about(bot, update):
 			disable_web_page_preview=True
 		)
 	else:
-		# ToDo: Button
+		# Done: Button (2018-07-18)
+		_button = InlineKeyboardButton(
+			text=emoji.emojize(strings.get("button_about", _lang), use_aliases=True),
+			url="https://telegram.me/%s?start=about" % bot.username
+		)
+		_markup = InlineKeyboardMarkup(
+			[[_button]]
+		)
 		update.message.reply_text(
-			"%s\n[About %s](https://telegram.me/%s?start=about)" % (
-				strings.get("about_public", _lang), config["telegram-botname"], config["telegram-botname"]
-			),
+			"%s" % strings.get("about_public", _lang),
 			parse_mode=ParseMode.MARKDOWN,
-			disable_web_page_preview=True
+			disable_web_page_preview=True,
+			reply_markup=_markup
 		)
 	return True
 
@@ -99,21 +118,38 @@ def cmd_help(bot, update):
 		# Check if callback
 		try:
 			if update.callback_query.data is not None:
-				update.callback_query.answer(strings.get("help", _lang))
+				update.callback_query.answer(strings.get("callback_simple", _lang))
 		except:
 			pass
+		# Answer
+		_button = InlineKeyboardButton(
+			text=emoji.emojize(strings.get("button_help_advanced_caption", _lang), use_aliases=True),
+			url=strings.get("button_help_advanced_url", _lang)
+		)
+		_markup = InlineKeyboardMarkup(
+			[[_button]]
+		)
 		bot.send_message(
 			chat_id=update.effective_chat.id,
-			text=strings.get("help", _lang),
+			text=emoji.emojize(strings.get("help", _lang), use_aliases=True),
 			parse_mode=ParseMode.MARKDOWN,
+			reply_markup=_markup,
 			disable_web_page_preview=True
 		)
 	else:
-		# ToDo: Button
+		# Done: Button (2018-07-18)
+		_button = InlineKeyboardButton(
+			text=emoji.emojize(strings.get("button_help", _lang), use_aliases=True),
+			url="https://telegram.me/%s?start=help" % bot.username
+		)
+		_markup = InlineKeyboardMarkup(
+			[[_button]]
+		)
 		update.message.reply_text(
 			"%s\n[Help!](https://telegram.me/%s?start=help)" % (strings.get("help_public", _lang), config["telegram-botname"]),
 			parse_mode=ParseMode.MARKDOWN,
-			disable_web_page_preview=True
+			disable_web_page_preview=True,
+			reply_markup=_markup
 		)
 	return True
 
@@ -202,8 +238,8 @@ def balance(bot, update):
 				)
 			else:
 				# ToDo: Handle the case when user has many addresses?
-				# ToDo: Maybe if something really weird happens and user ends up having more, we can calculate his balance.
-				# ToDo: This way, when asking for address (/deposit), we can return the first one.
+				# Maybe if something really weird happens and user ends up having more, we can calculate his balance.
+				# This way, when asking for address (/deposit), we can return the first one.
 				_address = _addresses[0]
 				_rpc_call = __wallet_rpc.getbalance(_address)
 				if not _rpc_call["success"]:
@@ -220,7 +256,7 @@ def balance(bot, update):
 
 
 # Done: Rewrite the whole logic; use tags instead of parsing usernames (2018-07-15)
-# ToDo: Allow private tipping if the user can be tagged (@username available) (Probably works, now)
+# Done: Allow private tipping if the user can be tagged (@username available) (Nothing to add for it to work.)
 def tip(bot, update):
 	"""
 	/tip <user> <amount>
@@ -263,7 +299,7 @@ def tip(bot, update):
 	# Make sure number of recipients is the same as number of values
 	if len(_amounts_float) != len(_recipients) or len(_amounts_float) == 0 or len(_recipients) == 0:
 		update.message.reply_text(
-			text=strings.get("error_tip_arguments", _lang),
+			text=strings.get("tip_error_arguments", _lang),
 			quote=True,
 			parse_mode=ParseMode.MARKDOWN
 		)
@@ -290,7 +326,6 @@ def tip(bot, update):
 					quote=True
 				)
 			else:
-				# ToDo: Maybe handle many addresses
 				_address = _addresses[0]
 				# Get user's balance
 				_rpc_call = __wallet_rpc.getbalance(_address)
@@ -335,7 +370,7 @@ def tip(bot, update):
 								_address = None
 								_addresses = _rpc_call["result"]["result"]
 								if len(_addresses) == 0:
-									# ToDo: recipient has no address, create one
+									# Recipient has no address, create one
 									_rpc_call = __wallet_rpc.getaccountaddress(_recipient_id)
 									if not _rpc_call["success"]:
 										print("Error during RPC call.")
@@ -367,11 +402,11 @@ def tip(bot, update):
 							_tx = _rpc_call["result"]["result"]
 							_suppl = ""
 							if len(_tip_dict) != len(_recipients):
-								_suppl = "\n\n_%s_" % strings.get("missing_tip_recipient", _lang)
+								_suppl = "\n\n_%s_" % strings.get("tip_missing_recipient", _lang)
 							update.message.reply_text(
 								text = "*%s* %s\n%s\n\n[tx %s](%s)%s" % (
 									update.effective_user.name,
-									strings.get("success_tip", _lang),
+									strings.get("tip_success", _lang),
 									''.join((("\n- `%3.0f PND ` to *%s*" % (_tip_dict[_recipient_id], _handled[_recipient_id][0])) for _recipient_id in _tip_dict)),
 									_tx[:4] + "..." + _tx[-4:],
 									"https://chainz.cryptoid.info/pnd/tx.dws?" + _tx,
@@ -459,7 +494,7 @@ def withdraw(bot, update, args):
 								_tx = _rpc_call["result"]["result"]
 								update.message.reply_text(
 									text="%s\n[tx %s](%s)" % (
-										strings.get("success_withdraw", _lang),
+										strings.get("withdraw_success", _lang),
 										_tx[:4]+"..."+_tx[-4:],
 										"https://chainz.cryptoid.info/pnd/tx.dws?" + _tx
 									),
@@ -586,7 +621,6 @@ def convert_to_float(text):
 
 
 def price(bot, update):
-	# ToDo:
 	pass
 
 
@@ -604,7 +638,6 @@ def moon(bot, update):
 
 
 def market_cap(bot, update):
-	# ToDo:
 	pass
 
 
@@ -614,7 +647,9 @@ if __name__ == "__main__":
 	# TGBot commands
 	dispatcher.add_handler(CommandHandler('start', cmd_start, pass_args=True))
 	dispatcher.add_handler(CommandHandler('help', cmd_help))
+	dispatcher.add_handler(CallbackQueryHandler(callback=cmd_help, pattern=r'^help$'))
 	dispatcher.add_handler(CommandHandler('about', cmd_about))
+	dispatcher.add_handler(CallbackQueryHandler(callback=cmd_about, pattern=r'^about$'))
 	# Funny commands
 	dispatcher.add_handler(CommandHandler('moon', moon))
 	dispatcher.add_handler(CommandHandler('hi', hi))

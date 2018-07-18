@@ -1,34 +1,55 @@
 {
 	"welcome": {
 		"en": [
-			"This is a text placeholder for the welcome message in English."
-		]
-	},
-	"commands": {
-		"en": [
-			"This is a text placeholder for the command list message in English."
+			":panda_face: Hi! This is a tipbot for Pandacoin.",
+			"You can use it to share pandas with your friends."
 		]
 	},
 	"help": {
 		"en": [
-			"Use this bot to send pandacoins to your friends!",
-			"Commands:",
-			" /tip <user> <amount>",
-			" /withdraw <amount> <address>",
-			" /address"
-		],
-		"fr": [
-			"Envoyez des pandacoins à vos amis grâce à ce bot !",
-			"Commandes :",
-			" /tip <utilisateur> <montant>",
-			" /withdraw <montant> <adresse>",
-			" /address"
+			"This bot allows you to receive, store and send pandacoins on Telegram.",
+			"",
+			":moneybag: To get started, create a deposit address or ask a friend to send you some pandas.",
+			"Use /deposit or /address _in private_ to know your own address on the bot.",
+			"Then you can send funds to that address the same way as you usually transfer funds with your PandaBank.",
+			"Use /balance _in private_ to know how much Pandacoin you have got in your account.",
+			"",
+			":person_tipping_hand: Once you have some pandas, share them with your friends.",
+			"Use `/tip <user> <amount>`",
+			"Make sure to correctly tag your the person you are tipping.",
+			"",
+			":globe_with_meridians: Need to withdraw to your PandaBank?",
+			"Use `/withdraw <address> <amount>`",
+			"Please double check your address before submitting, as we cannot undo that process.",
+			"",
+			"",
+			"Need more advanced help and usage tricks?",
+			"Click the button bellow:"
+		]
+	},
+	"button_help_advanced_caption": {
+		"en": [
+			":gear: Advanced help."
+		]
+	},
+	"button_help_advanced_url": {
+		"en": [
+			"https://github.com/DarthJahus/PandaTip-Telegram/wiki/Usage-and-tricks-%5BEnglish%5D"
 		]
 	},
 	"help_public": {
 		"en": [
-			"You can't ask this in public !",
+			"You can't ask this in public!",
 			"Please, click the button bellow:"
+		],
+		"fr": [
+			"Vous ne pouvez pas demander cela en public !",
+			"Veuillez cliquer sur ce bouton :"
+		]
+	},
+	"button_help": {
+		"en": [
+			":robot_face: HELP"
 		]
 	},
 	"about": {
@@ -40,6 +61,16 @@
 		"en": [
 			"You can't ask this in public !",
 			"Please, click the button bellow:"
+		]
+	},
+	"callback_simple": {
+		"en": [
+			"Here you are!"
+		]
+	},
+	"button_about": {
+		"en": [
+			":information: ABOUT"
 		]
 	},
 	"error_bad_deep_link": {
@@ -74,7 +105,7 @@
 			"Your deposit address is:"
 		]
 	},
-	"success_withdraw": {
+	"withdraw_success": {
 		"en": [
 			"Withdrawal made successfully."
 		]
@@ -100,19 +131,19 @@
 		]
 	},
 	
-	"success_tip": {
+	"tip_success": {
 		"en": [
 			"successfully tipped:"
 		]
 	},
 	
-	"missing_tip_recipient": {
+	"tip_missing_recipient": {
 		"en": [
 			"Some users couldn't be tipped. Reasons..."
 		]
 	},
 	
-	"error_tip_arguments": {
+	"tip_error_arguments": {
 		"en": [
 			"There was an error in your tip.",
 			"- All recipients need to be *unique* and *properly tagged*;",
