@@ -1,0 +1,28 @@
+# cp ./pandatip.service /lib/systemd/system/pandatip.service
+# chmod 644 /lib/systemd/system/pandatip.service
+# Don't forget #!/usr/bin/python
+# chmod +x ./PandaTip.py
+# systemctl daemon-reload
+# systemctl enable pandatip.service
+# systemctl start pandatip.service
+# Status:
+# systemctl status pandatip.service
+# To stop:
+# systemctl stop pandatip.service
+# To remove
+# systemctl disable pandatip.service
+
+[Unit]
+Description=PandaTipBot
+After=syslog.target
+After=network.target
+
+[Service]
+Type=simple
+ExecStart=/pandacoin/pandatip-telegram/PandaTip.py
+WorkingDirectory=/pandacoin/pandatip-telegram/
+Restart=always
+RestartSec=600
+
+[Install]
+WantedBy=multi-user.target
