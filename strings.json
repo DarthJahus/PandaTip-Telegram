@@ -54,7 +54,8 @@
 	},
 	"about": {
 		"en": [
-			"This is a text placeholder for the about text in English."
+			"This is a tipbot for Pandacoin.",
+			"Made by [@DarthJahus](https://github.com/DarthJahus) and [@JustTheDoctor](https://github.com/JustTheDoctor)."
 		]
 	},
 	"about_public": {

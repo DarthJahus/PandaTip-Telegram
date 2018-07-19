@@ -82,11 +82,19 @@ def cmd_about(bot, update):
 		except:
 			pass
 		# Answer
+		_button = InlineKeyboardButton(
+			text=emoji.emojize(strings.get("button_help", _lang), use_aliases=True),
+			callback_data="help"
+		)
+		_markup = InlineKeyboardMarkup(
+			[[_button]]
+		)
 		bot.send_message(
 			chat_id=update.effective_chat.id,
 			text=strings.get("about", _lang),
 			parse_mode=ParseMode.MARKDOWN,
-			disable_web_page_preview=True
+			disable_web_page_preview=True,
+			reply_markup=_markup
 		)
 	else:
 		# Done: Button (2018-07-18)
@@ -146,7 +154,7 @@ def cmd_help(bot, update):
 			[[_button]]
 		)
 		update.message.reply_text(
-			"%s\n[Help!](https://telegram.me/%s?start=help)" % (strings.get("help_public", _lang), config["telegram-botname"]),
+			"%s" % strings.get("help_public", _lang),
 			parse_mode=ParseMode.MARKDOWN,
 			disable_web_page_preview=True,
 			reply_markup=_markup
