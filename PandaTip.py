@@ -13,10 +13,14 @@ logging.basicConfig(
 	format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
 	level=logging.INFO
 )
+import time
+from datetime import datetime
+
 
 config = load_file_json("config.json")
 _lang = "en" # ToDo: Per-user language
 strings = Strings("strings.json")
+_paused = False
 
 
 # Constants
@@ -175,6 +179,9 @@ def deposit(bot, update):
 		_chat_type = "group"
 	# Only show deposit address if it's a private conversation with the bot
 	if _chat_type == "private":
+		if _paused:
+			update.message.reply_text(text=emoji.emojize(strings.get("global_paused"), use_aliases=True), quote=True)
+			return
 		_username = update.effective_user.username
 		if _username is None:
 			_user_id = str(update.effective_user.id)
@@ -184,9 +191,11 @@ def deposit(bot, update):
 		_rpc_call = __wallet_rpc.getaddressesbyaccount(_user_id)
 		if not _rpc_call["success"]:
 			print("Error during RPC call.")
+			log("deposit", _user_id, "getaddressesbyaccount > Error during RPC call.")
 		else:
 			if _rpc_call["result"]["error"] is not None:
 				print("Error: %s" % _rpc_call["result"]["error"])
+				log("deposit", _user_id, "getaddressesbyaccount > Error: %s" % _rpc_call["result"]["error"])
 			else:
 				# Check if user already has an address. This will prevent creating another address if user has one
 				_addresses = _rpc_call["result"]["result"]
@@ -195,9 +204,11 @@ def deposit(bot, update):
 					_rpc_call = __wallet_rpc.getaccountaddress(_user_id)
 					if not _rpc_call["success"]:
 						print("Error during RPC call.")
+						log("deposit", _user_id, "getaccountaddress > Error during RPC call.")
 					else:
 						if _rpc_call["result"]["error"] is not None:
 							print("Error: %s" % _rpc_call["result"]["error"])
+							log("deposit", _user_id, "getaccountaddress > Error: %s" % _rpc_call["result"]["error"])
 						else:
 							_address = _rpc_call["result"]["result"]
 				else:
@@ -224,6 +235,9 @@ def balance(bot, update):
 		_chat_type = "group"
 	# Only show balance if it's a private conversation with the bot
 	if _chat_type == "private":
+		if _paused:
+			update.message.reply_text(text=emoji.emojize(strings.get("global_paused"), use_aliases=True), quote=True)
+			return
 		# See issue #2 (https://github.com/DarthJahus/PandaTip-Telegram/issues/2)
 		_username = update.effective_user.username
 		if _username is None:
@@ -234,8 +248,10 @@ def balance(bot, update):
 		_rpc_call = __wallet_rpc.getaddressesbyaccount(_user_id)
 		if not _rpc_call["success"]:
 			print("Error during RPC call: %s" % _rpc_call["message"])
+			log("balance", _user_id, "(1) getaddressesbyaccount > Error during RPC call: %s" % _rpc_call["message"])
 		elif _rpc_call["result"]["error"] is not None:
 			print("Error: %s" % _rpc_call["result"]["error"])
+			log("balance", _user_id, "(1) getaddressesbyaccount > Error: %s" % _rpc_call["result"]["error"])
 		else:
 			_addresses = _rpc_call["result"]["result"]
 			if len(_addresses) == 0:
@@ -252,8 +268,10 @@ def balance(bot, update):
 				_rpc_call = __wallet_rpc.getbalance(_address)
 				if not _rpc_call["success"]:
 					print("Error during RPC call.")
+					log("balance", _user_id, "(2) getbalance > Error during RPC call: %s" % _rpc_call["message"])
 				elif _rpc_call["result"]["error"] is not None:
 					print("Error: %s" % _rpc_call["result"]["error"])
+					log("balance", _user_id, "(2) getbalance > Error: %s" % _rpc_call["result"]["error"])
 				else:
 					_balance = float(_rpc_call["result"]["result"])
 					update.message.reply_text(
@@ -271,7 +289,9 @@ def tip(bot, update):
 	/tip u1 u2 u3 ... v1 v2 v3 ...
 	/tip u1 v1 u2 v2 u3 v3 ...
 	"""
-	#
+	if _paused:
+		update.message.reply_text(text=emoji.emojize(strings.get("global_paused"), use_aliases=True), quote=True)
+		return
 	# Get recipients and values
 	_message = update.effective_message.text
 	_modifier = 0
@@ -323,8 +343,10 @@ def tip(bot, update):
 		_rpc_call = __wallet_rpc.getaddressesbyaccount(_user_id)
 		if not _rpc_call["success"]:
 			print("Error during RPC call: %s" % _rpc_call["message"])
+			log("tip", _user_id, "(1) getaddressesbyaccount > Error during RPC call: %s" % _rpc_call["message"])
 		elif _rpc_call["result"]["error"] is not None:
 			print("Error: %s" % _rpc_call["result"]["error"])
+			log("tip", _user_id, "(1) getaddressesbyaccount > Error: %s" % _rpc_call["result"]["error"])
 		else:
 			_addresses = _rpc_call["result"]["result"]
 			if len(_addresses) == 0:
@@ -339,8 +361,10 @@ def tip(bot, update):
 				_rpc_call = __wallet_rpc.getbalance(_address)
 				if not _rpc_call["success"]:
 					print("Error during RPC call.")
+					log("tip", _user_id, "(2) getbalance > Error during RPC call: %s" % _rpc_call["message"])
 				elif _rpc_call["result"]["error"] is not None:
 					print("Error: %s" % _rpc_call["result"]["error"])
+					log("tip", _user_id, "(2) getbalance > Error: %s" % _rpc_call["result"]["error"])
 				else:
 					_balance = float(_rpc_call["result"]["result"])
 					# Now, finally, check if user has enough funds (includes tx fee)
@@ -372,8 +396,11 @@ def tip(bot, update):
 							_rpc_call = __wallet_rpc.getaddressesbyaccount(_recipient_id)
 							if not _rpc_call["success"]:
 								print("Error during RPC call.")
+								log("tip", _user_id,
+									"(3) getaddressesbyaccount(%s) > Error during RPC call: %s" % (_recipient_id, _rpc_call["message"]))
 							elif _rpc_call["result"]["error"] is not None:
 								print("Error: %s" % _rpc_call["result"]["error"])
+								log("tip", _user_id, "(3) getaddressesbyaccount(%s) > Error: %s" % (_recipient_id, _rpc_call["result"]["error"]))
 							else:
 								_address = None
 								_addresses = _rpc_call["result"]["result"]
@@ -382,8 +409,14 @@ def tip(bot, update):
 									_rpc_call = __wallet_rpc.getaccountaddress(_recipient_id)
 									if not _rpc_call["success"]:
 										print("Error during RPC call.")
+										log("tip", _user_id,
+											"(4) getaccountaddress(%s) > Error during RPC call: %s" % (
+											_recipient_id, _rpc_call["message"])
+											)
 									elif _rpc_call["result"]["error"] is not None:
 										print("Error: %s" % _rpc_call["result"]["error"])
+										log("tip", _user_id, "(4) getaccountaddress(%s) > Error: %s" % (
+										_recipient_id, _rpc_call["result"]["error"]))
 									else:
 										_address = _rpc_call["result"]["result"]
 								else:
@@ -404,8 +437,10 @@ def tip(bot, update):
 						_rpc_call = __wallet_rpc.sendmany(_user_id, _tip_dict)
 						if not _rpc_call["success"]:
 							print("Error during RPC call.")
+							log("tip", _user_id, "(4) sendmany > Error during RPC call: %s" % _rpc_call["message"])
 						elif _rpc_call["result"]["error"] is not None:
 							print("Error: %s" % _rpc_call["result"]["error"])
+							log("tip", _user_id, "(4) sendmany > Error: %s" % _rpc_call["result"]["error"])
 						else:
 							_tx = _rpc_call["result"]["result"]
 							_suppl = ""
@@ -439,6 +474,9 @@ def withdraw(bot, update, args):
 		_chat_type = "group"
 	#
 	if _chat_type == "private":
+		if _paused:
+			update.message.reply_text(text=emoji.emojize(strings.get("global_paused"), use_aliases=True), quote=True)
+			return
 		_amount = None
 		_recipient = None
 		if len(args) == 2:
@@ -466,8 +504,10 @@ def withdraw(bot, update, args):
 			_rpc_call = __wallet_rpc.getaddressesbyaccount(_user_id)
 			if not _rpc_call["success"]:
 				print("Error during RPC call: %s" % _rpc_call["message"])
+				log("withdraw", _user_id, "(1) getaddressesbyaccount > Error during RPC call: %s" % _rpc_call["message"])
 			elif _rpc_call["result"]["error"] is not None:
 				print("Error: %s" % _rpc_call["result"]["error"])
+				log("withdraw", _user_id, "(1) getaddressesbyaccount > Error: %s" % _rpc_call["result"]["error"])
 			else:
 				_addresses = _rpc_call["result"]["result"]
 				if len(_addresses) == 0:
@@ -481,8 +521,10 @@ def withdraw(bot, update, args):
 					_rpc_call = __wallet_rpc.getbalance(_address)
 					if not _rpc_call["success"]:
 						print("Error during RPC call.")
+						log("withdraw", _user_id, "(2) getbalance > Error during RPC call: %s" % _rpc_call["message"])
 					elif _rpc_call["result"]["error"] is not None:
 						print("Error: %s" % _rpc_call["result"]["error"])
+						log("withdraw", _user_id, "(2) getbalance > Error: %s" % _rpc_call["result"]["error"])
 					else:
 						_balance = float(_rpc_call["result"]["result"])
 						if _balance < _amount + 5:
@@ -496,8 +538,10 @@ def withdraw(bot, update, args):
 							_rpc_call = __wallet_rpc.sendfrom(_user_id, _recipient, _amount)
 							if not _rpc_call["success"]:
 								print("Error during RPC call.")
+								log("withdraw", _user_id, "(3) sendfrom > Error during RPC call: %s" % _rpc_call["message"])
 							elif _rpc_call["result"]["error"] is not None:
 								print("Error: %s" % _rpc_call["result"]["error"])
+								log("withdraw", _user_id, "(3) sendfrom > Error: %s" % _rpc_call["result"]["error"])
 							else:
 								_tx = _rpc_call["result"]["result"]
 								update.message.reply_text(
@@ -521,6 +565,9 @@ def scavenge(bot, update):
 		_chat_type = "group"
 	# Only if it's a private conversation with the bot
 	if _chat_type == "private":
+		if _paused:
+			update.message.reply_text(text=emoji.emojize(strings.get("global_paused"), use_aliases=True), quote=True)
+			return
 		_username = update.effective_user.username
 		if _username is None:
 			update.message.reply_text(
@@ -535,8 +582,10 @@ def scavenge(bot, update):
 			_rpc_call = __wallet_rpc.getaddressesbyaccount(_user_id)
 			if not _rpc_call["success"]:
 				print("Error during RPC call: %s" % _rpc_call["message"])
+				log("scavenge", _user_id, "(1) getaddressesbyaccount > Error during RPC call: %s" % _rpc_call["message"])
 			elif _rpc_call["result"]["error"] is not None:
 				print("Error: %s" % _rpc_call["result"]["error"])
+				log("scavenge", _user_id, "(1) getaddressesbyaccount > Error: %s" % _rpc_call["result"]["error"])
 			else:
 				_addresses = _rpc_call["result"]["result"]
 				if len(_addresses) == 0:
@@ -549,8 +598,10 @@ def scavenge(bot, update):
 					_rpc_call = __wallet_rpc.getbalance(_address)
 					if not _rpc_call["success"]:
 						print("Error during RPC call.")
+						log("scavenge", _user_id, "(2) getbalance > Error during RPC call: %s" % _rpc_call["message"])
 					elif _rpc_call["result"]["error"] is not None:
 						print("Error: %s" % _rpc_call["result"]["error"])
+						log("scavenge", _user_id, "(2) getbalance > Error: %s" % _rpc_call["result"]["error"])
 					else:
 						_balance = float(_rpc_call["result"]["result"])
 						# Done: Move balance from UserID to @username if balance > 5 (2018-07-16)
@@ -565,8 +616,10 @@ def scavenge(bot, update):
 							_rpc_call = __wallet_rpc.getaddressesbyaccount(_username)
 							if not _rpc_call["success"]:
 								print("Error during RPC call: %s" % _rpc_call["message"])
+								log("scavenge", _user_id, "(3) getaddressesbyaccount > Error during RPC call: %s" % _rpc_call["message"])
 							elif _rpc_call["result"]["error"] is not None:
 								print("Error: %s" % _rpc_call["result"]["error"])
+								log("scavenge", _user_id, "(3) getaddressesbyaccount > Error: %s" % _rpc_call["result"]["error"])
 							else:
 								_address = None
 								_addresses = _rpc_call["result"]["result"]
@@ -575,8 +628,10 @@ def scavenge(bot, update):
 									_rpc_call = __wallet_rpc.getaccountaddress(_username)
 									if not _rpc_call["success"]:
 										print("Error during RPC call.")
+										log("scavenge", _user_id, "(4) getaccountaddress > Error during RPC call: %s" % _rpc_call["message"])
 									elif _rpc_call["result"]["error"] is not None:
 										print("Error: %s" % _rpc_call["result"]["error"])
+										log("scavenge", _user_id, "(4) getaccountaddress > Error: %s" % _rpc_call["result"]["error"])
 									else:
 										_address = _rpc_call["result"]["result"]
 								else:
@@ -587,8 +642,10 @@ def scavenge(bot, update):
 									_rpc_call = __wallet_rpc.sendfrom(_user_id, _address, _balance-5)
 									if not _rpc_call["success"]:
 										print("Error during RPC call.")
+										log("scavenge", _user_id, "(5) sendfrom > Error during RPC call: %s" % _rpc_call["message"])
 									elif _rpc_call["result"]["error"] is not None:
 										print("Error: %s" % _rpc_call["result"]["error"])
+										log("scavenge", _user_id, "(5) sendfrom > Error: %s" % _rpc_call["result"]["error"])
 									else:
 										_tx = _rpc_call["result"]["result"]
 										update.message.reply_text(
@@ -623,6 +680,44 @@ def convert_to_float(text):
 					raise ValueError("Can't convert %s to float." % text)
 			else:
 				return 10**(int(len(text)/2))
+
+
+def cmd_send_log(bot, update):
+	"""
+	Send logs to (admin) user
+	"""
+	# Note: Don't use emoji in caption
+	# Check if admin
+	if update.effective_chat.id in config["admins"]:
+		with open("log.csv", "rb") as _file:
+			_file_name = "%s-log-%s.csv" % (config["bot_name"], datetime.fromtimestamp(time.time()).strftime("%Y-%m-%dT%H-%M-%S"))
+			bot.sendDocument(
+				chat_id=update.effective_user.id,
+				document=_file,
+				reply_to_message_id=update.message.message_id,
+				caption="Here you are!",
+				filename=_file_name
+			)
+		log(fun="cmd_send_log", user=str(update.effective_user.id), message="Log sent to admin '%s'." % update.effective_user.name)
+
+
+def cmd_clear_log(bot, update):
+	if update.effective_chat in config["admins"]:
+		clear_log()
+		update.message.reply_text(text=emoji.emojize(strings.get("clear_log_done"), use_aliases=True))
+
+
+def cmd_pause(bot, update):
+	# Admins only
+	if update.effective_chat.id in config["admins"]:
+		global _paused
+		_paused = not _paused
+		_answer = ""
+		if _paused:
+			_answer = strings.get("pause_answer_paused")
+		else:
+			_answer = strings.get("pause_answer_resumed")
+		update.message.reply_text(emoji.emojize(_answer, use_aliases=True), quote=True)
 
 
 # ToDo: Revamp functions bellow
@@ -671,4 +766,9 @@ if __name__ == "__main__":
 	# Conversion commands
 	dispatcher.add_handler(CommandHandler('marketcap', marketcap))
 	dispatcher.add_handler(CommandHandler('price', price))
+	# Admin commands
+	dispatcher.add_handler(CommandHandler("send_log", cmd_send_log))
+	dispatcher.add_handler(CommandHandler("get_log", cmd_send_log))
+	dispatcher.add_handler(CommandHandler("clear_log", cmd_clear_log))
+	dispatcher.add_handler(CommandHandler("pause", cmd_pause)) # pause / unpause
 	updater.start_polling()
