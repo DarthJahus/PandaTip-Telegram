@@ -158,5 +158,29 @@
 			"Sorry, you don't have enough funds for this operation.",
 			"Available for withdrawal:"
 		]
+	},
+	
+	"global_paused": {
+		"en": [
+			":pause_button: Sorry, this bot has been paused by the admins. Try again later."
+		]
+	},
+	
+	"pause_answer_paused": {
+		"en": [
+			":pause_button: Paused!"
+		]
+	},
+	
+	"pause_answer_resumed": {
+		"en": [
+			":play_button: Resumed!"
+		]
+	},
+	
+	"clear_log_done": {
+		"en": [
+			":white_check_mark: Cleared!"
+		]
 	}
 }
