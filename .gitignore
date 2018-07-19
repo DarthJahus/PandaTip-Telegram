@@ -1,4 +1,3 @@
-
 # Created by https://www.gitignore.io/api/python
 
 ### Python ###
@@ -110,5 +109,10 @@ venv.bak/
 ### Python Patch ###
 .venv/
 
-
 # End of https://www.gitignore.io/api/python
+
+# PyCharm
+.idea/
+
+# Project-specific
+config.json
