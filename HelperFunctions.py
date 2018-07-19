@@ -1,4 +1,7 @@
 import json
+import time
+from datetime import datetime
+import codecs
 
 
 def load_file_json(file_name):
@@ -13,11 +16,35 @@ class Strings:
 	def __init__(self, file):
 		self.dict = load_file_json(file)
 
-	def get(self, item, lang, lang_fail_over="en"):
+	def get(self, item, lang="en"):
+		_lang_fail_over = "en"
 		if lang not in self.dict[item]:
-			return '\n'.join(self.dict[item][lang_fail_over])
+			return '\n'.join(self.dict[item][_lang_fail_over])
 		else:
 			return '\n'.join(self.dict[item][lang])
+
+
+def log(fun, user, message, debug=False):
+	# type: (str, str, str, bool) -> None
+	"""
+	Log in a CSV file
+	Header is:
+	"time", "command", "user_id", "message"
+	Time is in local-time
+	:rtype: None
+	"""
+	_log = (
+		datetime.fromtimestamp(time.time()).strftime("%Y-%m-%d %H:%M:%S") + ',' +
+		','.join([fun, user, "\"" + message.replace('\"', '\'').replace('\n', '|') + "\""]) + "\n"
+	)
+	with codecs.open("log.csv", 'a', "utf-8") as _file:
+		_file.write(_log)
+		if debug: print("*log = " + _log)
+
+
+def clear_log(debug=False):
+	codecs.open("log.csv", 'w', "utf-8").close()
+	if debug: print(">>> CLEARED LOG")
 
 
 if __name__ == "__main__":
