@@ -690,7 +690,7 @@ def cmd_send_log(bot, update):
 	# Check if admin
 	if update.effective_chat.id in config["admins"]:
 		with open("log.csv", "rb") as _file:
-			_file_name = "%s-log-%s.csv" % (config["bot_name"], datetime.fromtimestamp(time.time()).strftime("%Y-%m-%dT%H-%M-%S"))
+			_file_name = "%s-log-%s.csv" % (bot.username, datetime.fromtimestamp(time.time()).strftime("%Y-%m-%dT%H-%M-%S"))
 			bot.sendDocument(
 				chat_id=update.effective_user.id,
 				document=_file,
@@ -772,3 +772,4 @@ if __name__ == "__main__":
 	dispatcher.add_handler(CommandHandler("clear_log", cmd_clear_log))
 	dispatcher.add_handler(CommandHandler("pause", cmd_pause)) # pause / unpause
 	updater.start_polling()
+	log("__main__", "__system__", "Started service!")
