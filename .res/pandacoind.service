@@ -1,0 +1,37 @@
+# assuming pandacoind binary is /pandacoin/daemon/pandacoind
+# assuming chmod+x /pandacoin/daemon/pandacoind
+#
+# Copy the service file:
+# cp ./pandacoind.service /lib/systemd/system/pandacoind.service
+# chmod 644 /lib/systemd/system/pandacoind.service
+#
+# Install service file:
+# systemctl daemon-reload
+# systemctl enable pandacoind.service
+# Run service:
+# systemctl start pandacoind.service
+# Check status:
+# systemctl status pandacoind.service
+# Stop service:
+# systemctl stop pandacoind.service
+#
+# Remove service:
+# systemctl disable pandacoind.service
+
+[Unit]
+Description=Pandacoin Deamon
+After=syslog.target
+After=network.target
+
+[Service]
+Type=forking
+PIDFile=/pandacoin/data/pandacoind.pid
+ExecStart=/pandacoin/daemon/pandacoind -daemon -datadir=/pandacoin/data/ -pid=pandacoind.pid -conf=pandacoin.conf
+ExecStop=/pandacoin/daemon/pandacoind stop
+ExecReload=/pandacoin/daemon/pandacoind stop ; sleep 60 ; /pandacoin/daemon/pandacoind -daemon -datadir=/pandacoin/data/ -pid=pandacoind.pid -conf=pandacoin.conf
+RestartSec=300
+WorkingDirectory=/pandacoin/data/
+Restart=always
+
+[Install]
+WantedBy=multi-user.target

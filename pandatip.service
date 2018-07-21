@@ -16,6 +16,7 @@
 Description=PandaTipBot
 After=syslog.target
 After=network.target
+After=pandacoind.service
 
 [Service]
 Type=simple
