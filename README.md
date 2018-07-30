@@ -30,7 +30,8 @@ Create a `config.json` **JSON** file and set up the following parameters:
 ### ToDo
 
 - [ ] Per-user language
-- [ ] Add service commands like `/pause` (pauses the bot for everyone), and maybe some commands to check the health of the daemon / wallet.
+- [x] Add service commands like `/pause` (pauses the bot for everyone), and maybe some commands to check the health of the daemon / wallet.
 - [x] Populate `strings.json`
 - [ ] Show fiat equivalent for balance
 - [ ] Add `/price` and `/marketcap` commands
+- [ ] Add spam protection
