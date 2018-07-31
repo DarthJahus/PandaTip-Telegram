@@ -21,7 +21,7 @@ config = load_file_json("config.json")
 _lang = "en" # ToDo: Per-user language
 strings = Strings("strings.json")
 _paused = False
-
+_spam_filter = AntiSpamFilter(10, 60)
 
 # Constants
 __wallet_rpc = RPCWrapper(PandaRPC(config["rpc-uri"], (config["rpc-user"], config["rpc-psw"])))
@@ -34,6 +34,8 @@ __wallet_rpc = RPCWrapper(PandaRPC(config["rpc-uri"], (config["rpc-user"], confi
 def cmd_start(bot, update, args):
 	"""Reacts when /start is sent to the bot."""
 	if update.effective_chat.type == "private":
+		if not _spam_filter.verify(str(update.effective_user.id)):
+			return
 		# Check for deep link
 		if len(args) > 0:
 			if args[0].lower() == "about":
@@ -71,6 +73,8 @@ def cmd_start(bot, update, args):
 
 
 def cmd_about(bot, update):
+	if not _spam_filter.verify(str(update.effective_user.id)):
+		return
 	if update.effective_chat is None:
 		_chat_type = "private"
 	elif update.effective_chat.type == "private":
@@ -119,6 +123,8 @@ def cmd_about(bot, update):
 
 
 def cmd_help(bot, update):
+	if not _spam_filter.verify(str(update.effective_user.id)):
+		return
 	if update.effective_chat is None:
 		_chat_type = "private"
 	elif update.effective_chat.type == "private":
@@ -179,6 +185,8 @@ def deposit(bot, update):
 		_chat_type = "group"
 	# Only show deposit address if it's a private conversation with the bot
 	if _chat_type == "private":
+		if not _spam_filter.verify(str(update.effective_user.id)):
+			return # ToDo: Return a message?
 		if _paused:
 			update.message.reply_text(text=emoji.emojize(strings.get("global_paused"), use_aliases=True), quote=True)
 			return
@@ -235,6 +243,8 @@ def balance(bot, update):
 		_chat_type = "group"
 	# Only show balance if it's a private conversation with the bot
 	if _chat_type == "private":
+		if not _spam_filter.verify(str(update.effective_user.id)):
+			return # ToDo: Return a message?
 		if _paused:
 			update.message.reply_text(text=emoji.emojize(strings.get("global_paused"), use_aliases=True), quote=True)
 			return
@@ -289,6 +299,8 @@ def tip(bot, update):
 	/tip u1 u2 u3 ... v1 v2 v3 ...
 	/tip u1 v1 u2 v2 u3 v3 ...
 	"""
+	if not _spam_filter.verify(str(update.effective_user.id)):
+		return  # ToDo: Return a message?
 	if _paused:
 		update.message.reply_text(text=emoji.emojize(strings.get("global_paused"), use_aliases=True), quote=True)
 		return
@@ -474,6 +486,8 @@ def withdraw(bot, update, args):
 		_chat_type = "group"
 	#
 	if _chat_type == "private":
+		if not _spam_filter.verify(str(update.effective_user.id)):
+			return # ToDo: Return a message?
 		if _paused:
 			update.message.reply_text(text=emoji.emojize(strings.get("global_paused"), use_aliases=True), quote=True)
 			return
@@ -565,6 +579,8 @@ def scavenge(bot, update):
 		_chat_type = "group"
 	# Only if it's a private conversation with the bot
 	if _chat_type == "private":
+		if not _spam_filter.verify(str(update.effective_user.id)):
+			return # ToDo: Return a message?
 		if _paused:
 			update.message.reply_text(text=emoji.emojize(strings.get("global_paused"), use_aliases=True), quote=True)
 			return
@@ -732,6 +748,8 @@ def marketcap(bot, update):
 
 
 def hi(bot, update):
+	if not _spam_filter.verify(str(update.effective_user.id)):
+		return  # ToDo: Return a message?
 	user = update.message.from_user.username
 	bot.send_message(chat_id=update.message.chat_id, text="Hello @{0}, how are you doing today?".format(user))
 

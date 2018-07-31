@@ -47,6 +47,35 @@ def clear_log(debug=False):
 	if debug: print(">>> CLEARED LOG")
 
 
+class AntiSpamFilter:
+
+	def __init__(self, max_events, time_span):
+		self.db = {}
+		self.max_events = max_events
+		self.time_span = time_span
+
+	def verify(self, entity, add=True):
+		if entity.lower() not in self.db:
+			self.db[entity.lower()] = {
+				"count": int(add),
+				"start_time": time.time()
+			}
+			return True
+		else:
+			self.db[entity.lower()]["count"] += int(add)
+			_count = self.db[entity.lower()]["count"]
+			_start_time = self.db[entity.lower()]["start_time"]
+			if _count > self.max_events:
+				if (time.time() - _start_time) <= self.time_span:
+					return False
+				else:
+					self.db[entity.lower()]["count"] = 0
+					self.db[entity.lower()]["start_time"] = time.time()
+					return True
+			else:
+				return True
+
+
 if __name__ == "__main__":
 	str = Strings("strings.json")
 	print(str.get("help", "en"))
