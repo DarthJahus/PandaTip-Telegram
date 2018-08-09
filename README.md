@@ -25,6 +25,21 @@ Create a `config.json` **JSON** file and set up the following parameters:
     	"rpc-psw": "suchpassword"
     }
 
+### Pandacoin daemon configuration
+
+A `pandacoin.conf` file is needed in data directory.
+
+(sample)
+
+    server=1
+    daemon=1
+    staking=0
+    rpcuser=muchuser
+    rpcpassword=suchsicret
+    pid=pandacoind.pid
+    rpcallowip=127.0.0.1
+    rpcconnect=127.0.0.1
+
 ---
 
 ### ToDo
@@ -34,4 +49,4 @@ Create a `config.json` **JSON** file and set up the following parameters:
 - [x] Populate `strings.json`
 - [ ] Show fiat equivalent for balance
 - [ ] Add `/price` and `/marketcap` commands
-- [ ] Add spam protection
+- [x] Add spam protection

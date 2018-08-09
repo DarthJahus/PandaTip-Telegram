@@ -28,7 +28,7 @@ Type=forking
 PIDFile=/pandacoin/data/pandacoind.pid
 ExecStart=/pandacoin/daemon/pandacoind -daemon -staking=0 -datadir=/pandacoin/data/ -pid=pandacoind.pid -conf=pandacoin.conf
 ExecStop=/pandacoin/daemon/pandacoind stop
-ExecReload=/pandacoin/daemon/pandacoind stop ; sleep 60 ; /pandacoin/daemon/pandacoind -daemon -staking=0 -datadir=/pandacoin/data/ -pid=pandacoind.pid -conf=pandacoin.conf
+ExecReload=/pandacoin/daemon/pandacoind stop ; /bin/sleep 60 ; /pandacoin/daemon/pandacoind -daemon -staking=0 -datadir=/pandacoin/data/ -pid=pandacoind.pid -conf=pandacoin.conf
 RestartSec=300
 WorkingDirectory=/pandacoin/data/
 Restart=always

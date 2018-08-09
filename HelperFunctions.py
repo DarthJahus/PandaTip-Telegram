@@ -24,7 +24,7 @@ class Strings:
 			return '\n'.join(self.dict[item][lang])
 
 
-def log(fun, user, message, debug=False):
+def log(fun, user, message, debug=True):
 	# type: (str, str, str, bool) -> None
 	"""
 	Log in a CSV file
