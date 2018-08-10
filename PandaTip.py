@@ -21,7 +21,7 @@ config = load_file_json("config.json")
 _lang = "en" # ToDo: Per-user language
 strings = Strings("strings.json")
 _paused = False
-_spam_filter = AntiSpamFilter(10, 60)
+_spam_filter = AntiSpamFilter(config["spam_filter"][0], config["spam_filter"][1])
 
 # Constants
 __wallet_rpc = RPCWrapper(PandaRPC(config["rpc-uri"], (config["rpc-user"], config["rpc-psw"])))
@@ -543,7 +543,7 @@ def withdraw(bot, update, args):
 						_balance = float(_rpc_call["result"]["result"])
 						if _balance < _amount + 5:
 							update.message.reply_text(
-								text="%s `%.0f PND`" % (strings.get("withdraw_no_funds", _lang), _amount-5),
+								text="%s `%.0f PND`" % (strings.get("withdraw_no_funds", _lang), _balance-5),
 								quote=True,
 								parse_mode=ParseMode.MARKDOWN
 							)
