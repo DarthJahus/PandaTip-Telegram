@@ -283,9 +283,9 @@ def balance(bot, update):
 					print("Error: %s" % _rpc_call["result"]["error"])
 					log("balance", _user_id, "(2) getbalance > Error: %s" % _rpc_call["result"]["error"])
 				else:
-					_balance = float(_rpc_call["result"]["result"])
+					_balance = int(_rpc_call["result"]["result"])
 					update.message.reply_text(
-						text="%s\n`%.0f PND`" % (strings.get("user_balance", _lang), _balance),
+						text="%s\n`%i PND`" % (strings.get("user_balance", _lang), _balance),
 						parse_mode=ParseMode.MARKDOWN,
 						quote=True
 					)
@@ -333,7 +333,7 @@ def tip(bot, update):
 	_amounts_float = []
 	try:
 		for _amount in _amounts:
-			_amounts_float.append(convert_to_float(_amount))
+			_amounts_float.append(convert_to_int(_amount))
 	except:
 		_amounts_float = []
 	# Make sure number of recipients is the same as number of values
@@ -378,11 +378,11 @@ def tip(bot, update):
 					print("Error: %s" % _rpc_call["result"]["error"])
 					log("tip", _user_id, "(2) getbalance > Error: %s" % _rpc_call["result"]["error"])
 				else:
-					_balance = float(_rpc_call["result"]["result"])
+					_balance = int(_rpc_call["result"]["result"])
 					# Now, finally, check if user has enough funds (includes tx fee)
 					if sum(_amounts_float) > _balance - max(1, int(len(_recipients)/3)):
 						update.message.reply_text(
-							text="%s `%.0f PND`" % (strings.get("tip_no_funds", _lang), sum(_amounts_float) + max(1, int(len(_recipients)/3))),
+							text="%s `%i PND`" % (strings.get("tip_no_funds", _lang), sum(_amounts_float) + max(1, int(len(_recipients)/3))),
 							quote=True,
 							parse_mode=ParseMode.MARKDOWN
 						)
@@ -540,10 +540,10 @@ def withdraw(bot, update, args):
 						print("Error: %s" % _rpc_call["result"]["error"])
 						log("withdraw", _user_id, "(2) getbalance > Error: %s" % _rpc_call["result"]["error"])
 					else:
-						_balance = float(_rpc_call["result"]["result"])
+						_balance = int(_rpc_call["result"]["result"])
 						if _balance < _amount + 5:
 							update.message.reply_text(
-								text="%s `%.0f PND`" % (strings.get("withdraw_no_funds", _lang), _balance-5),
+								text="%s `%i PND`" % (strings.get("withdraw_no_funds", _lang), _balance-5),
 								quote=True,
 								parse_mode=ParseMode.MARKDOWN
 							)
@@ -619,9 +619,9 @@ def scavenge(bot, update):
 						print("Error: %s" % _rpc_call["result"]["error"])
 						log("scavenge", _user_id, "(2) getbalance > Error: %s" % _rpc_call["result"]["error"])
 					else:
-						_balance = float(_rpc_call["result"]["result"])
+						_balance = int(_rpc_call["result"]["result"])
 						# Done: Move balance from UserID to @username if balance > 5 (2018-07-16)
-						if int(_balance) <= 5:
+						if _balance <= 5:
 							update.message.reply_text(
 								text="%s (`ID %s`)." % (strings.get("scavenge_empty", _lang), _user_id),
 								parse_mode=ParseMode.MARKDOWN,
@@ -665,7 +665,7 @@ def scavenge(bot, update):
 									else:
 										_tx = _rpc_call["result"]["result"]
 										update.message.reply_text(
-											text="%s (`%s`).\n%s `%.0f PND`\n[tx %s](%s)" % (
+											text="%s (`%s`).\n%s `%i PND`\n[tx %s](%s)" % (
 												strings.get("scavenge_success_1", _lang),
 												_user_id,
 												strings.get("scavenge_success_2", _lang),
@@ -679,21 +679,21 @@ def scavenge(bot, update):
 										)
 
 
-def convert_to_float(text):
+def convert_to_int(text):
 	# with panda feature :D (2018-07-18)
 	try:
 		# try convert to float
-		return float(text)
+		return int(text)
 	except:
 		# Check if the text is made of pandas
 		if len(text)/2 > 3 or len(text) == 0 or len(text) % 2 != 0:
-			raise ValueError("Can't convert %s to float." % text)
+			raise ValueError("Can't convert %s to int." % text)
 		else:
 			_panda = emoji.emojize(":panda_face:", use_aliases=True)
 			print(len(text))
 			for i in range(len(text)):
 				if text[i] != _panda[i%2]:
-					raise ValueError("Can't convert %s to float." % text)
+					raise ValueError("Can't convert %s to int." % text)
 			else:
 				return 10**(int(len(text)/2))
 
