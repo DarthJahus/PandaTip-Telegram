@@ -337,7 +337,10 @@ def tip(bot, update):
 	except:
 		_amounts_float = []
 	# Make sure number of recipients is the same as number of values
-	if len(_amounts_float) != len(_recipients) or len(_amounts_float) == 0 or len(_recipients) == 0:
+	# old: if len(_amounts_float) != len(_recipients) or len(_amounts_float) == 0 or len(_recipients) == 0:
+	# new: ((len(_amounts_float) == len(_recipients)) or (len(_amounts_float) == 1)) and (len(_recipients) > 0),
+	# use opposite
+	if ((len(_amounts_float) != len(_recipients)) and (len(_amounts_float) != 1)) or (len(_recipients) == 0):
 		update.message.reply_text(
 			text=strings.get("tip_error_arguments", _lang),
 			quote=True,
@@ -345,6 +348,9 @@ def tip(bot, update):
 		)
 	else:
 		#
+		# Check if only 1 amount is given
+		if len(_amounts_float) == 1 and len(_recipients) > 1:
+			_amounts_float = _amounts_float * len(_recipients)
 		# Check if user has enough balance
 		_username = update.effective_user.username
 		if _username is None:

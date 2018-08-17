@@ -149,7 +149,8 @@
 			"There was an error in your tip.",
 			"- All recipients need to be *unique* and *properly tagged*;",
 			"- Amounts have to be *numbers* (not real pandas);",
-			"- Number of recipients needs to be the *same* as the number of provided amounts."
+			"- Number of recipients needs to be the *same* as the number of provided amounts;",
+			" (You can enter one amount that will be applied to all recipients.)"
 		]	
 	},
 	
