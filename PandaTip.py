@@ -399,6 +399,7 @@ def tip(bot, update):
 						for _recipient in _recipients:
 							# add "or _recipient == bot.id" to disallow tipping the tip bot
 							if _recipient == _user_id:
+								i += 1
 								continue
 							if _recipient[0] == '@':
 								# ToDo: Get the id (actually not possible (Bot API 3.6, Feb. 2018)
