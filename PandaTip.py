@@ -42,6 +42,8 @@ def cmd_start(bot, update, args):
 				cmd_about(bot, update)
 			elif args[0].lower() == "help":
 				cmd_help(bot, update)
+			elif args[0].lower() == "address":
+				deposit(bot, update)
 			else:
 				update.message.reply_text(
 					strings.get("error_bad_deep_link", _lang),
@@ -172,6 +174,22 @@ def cmd_help(bot, update):
 	return True
 
 
+def msg_no_account(bot, update):
+	_button = InlineKeyboardButton(
+		text=emoji.emojize(strings.get("user_no_address_button", _lang), use_aliases=True),
+		url="https://telegram.me/%s?start=address" % bot.username
+	)
+	_markup = InlineKeyboardMarkup(
+		[[_button]]
+	)
+	update.message.reply_text(
+		"%s" % strings.get("user_no_address", _lang),
+		parse_mode=ParseMode.MARKDOWN,
+		disable_web_page_preview=True,
+		reply_markup=_markup,
+	)
+
+
 def deposit(bot, update):
 	"""
 	This commands works only in private.
@@ -266,10 +284,7 @@ def balance(bot, update):
 			_addresses = _rpc_call["result"]["result"]
 			if len(_addresses) == 0:
 				# User has no address, ask him to create one
-				update.message.reply_text(
-					text=strings.get("user_no_address", _lang),
-					quote=True
-				)
+				msg_no_account(bot, update)
 			else:
 				# ToDo: Handle the case when user has many addresses?
 				# Maybe if something really weird happens and user ends up having more, we can calculate his balance.
@@ -369,10 +384,7 @@ def tip(bot, update):
 			_addresses = _rpc_call["result"]["result"]
 			if len(_addresses) == 0:
 				# User has no address, ask him to create one
-				update.message.reply_text(
-					text=strings.get("user_no_address", _lang),
-					quote=True
-				)
+				msg_no_account(bot, update)
 			else:
 				_address = _addresses[0]
 				# Get user's balance
@@ -533,10 +545,7 @@ def withdraw(bot, update, args):
 				_addresses = _rpc_call["result"]["result"]
 				if len(_addresses) == 0:
 					# User has no address, ask him to create one
-					update.message.reply_text(
-						text=strings.get("user_no_address", _lang),
-						quote=True
-					)
+					msg_no_account(bot, update)
 				else:
 					_address = _addresses[0]
 					_rpc_call = __wallet_rpc.getbalance(_address)

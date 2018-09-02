@@ -90,6 +90,11 @@
 			"If you want to create an account, please press the button bellow:"
 		]
 	},
+	"user_no_address_button": {
+		"en": [
+			"My account :panda_face:"
+		]
+	},
 	"user_balance": {
 		"en": [
 			"Your balance is:"
