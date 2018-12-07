@@ -27,10 +27,9 @@ _spam_filter = AntiSpamFilter(config["spam_filter"][0], config["spam_filter"][1]
 __wallet_rpc = RPCWrapper(PandaRPC(config["rpc-uri"], (config["rpc-user"], config["rpc-psw"])))
 
 
-# ToDo: Add service commands like /pause (pauses the bot for everyone), and maybe some commands to check the health of the daemon / wallet.
+# ToDo: Add service commands to check the health of the daemon / wallet.
 
 
-# ToDo: Don't forget to write the strings in strings.json (they are actually empty)
 def cmd_start(bot, update, args):
 	"""Reacts when /start is sent to the bot."""
 	if update.effective_chat.type == "private":
@@ -204,7 +203,7 @@ def deposit(bot, update):
 	# Only show deposit address if it's a private conversation with the bot
 	if _chat_type == "private":
 		if not _spam_filter.verify(str(update.effective_user.id)):
-			return # ToDo: Return a message?
+			return
 		if _paused:
 			update.message.reply_text(text=emoji.emojize(strings.get("global_paused"), use_aliases=True), quote=True)
 			return
@@ -251,7 +250,6 @@ def deposit(bot, update):
 
 # Done: Give balance only if a private chat (2018-07-15)
 # Done: Remove WorldCoinIndex (2018-07-15)
-# ToDo: Add conversion
 def balance(bot, update):
 	if update.effective_chat is None:
 		_chat_type = "private"
@@ -262,7 +260,7 @@ def balance(bot, update):
 	# Only show balance if it's a private conversation with the bot
 	if _chat_type == "private":
 		if not _spam_filter.verify(str(update.effective_user.id)):
-			return # ToDo: Return a message?
+			return
 		if _paused:
 			update.message.reply_text(text=emoji.emojize(strings.get("global_paused"), use_aliases=True), quote=True)
 			return
@@ -315,7 +313,7 @@ def tip(bot, update):
 	/tip u1 v1 u2 v2 u3 v3 ...
 	"""
 	if not _spam_filter.verify(str(update.effective_user.id)):
-		return  # ToDo: Return a message?
+		return
 	if _paused:
 		update.message.reply_text(text=emoji.emojize(strings.get("global_paused"), use_aliases=True), quote=True)
 		return
@@ -506,7 +504,7 @@ def withdraw(bot, update, args):
 	#
 	if _chat_type == "private":
 		if not _spam_filter.verify(str(update.effective_user.id)):
-			return # ToDo: Return a message?
+			return
 		if _paused:
 			update.message.reply_text(text=emoji.emojize(strings.get("global_paused"), use_aliases=True), quote=True)
 			return
@@ -596,7 +594,7 @@ def scavenge(bot, update):
 	# Only if it's a private conversation with the bot
 	if _chat_type == "private":
 		if not _spam_filter.verify(str(update.effective_user.id)):
-			return # ToDo: Return a message?
+			return
 		if _paused:
 			update.message.reply_text(text=emoji.emojize(strings.get("global_paused"), use_aliases=True), quote=True)
 			return
@@ -752,32 +750,6 @@ def cmd_pause(bot, update):
 		update.message.reply_text(emoji.emojize(_answer, use_aliases=True), quote=True)
 
 
-# ToDo: Revamp functions bellow
-
-
-def price(bot, update):
-	pass
-
-
-def marketcap(bot, update):
-	pass
-
-
-def hi(bot, update):
-	if not _spam_filter.verify(str(update.effective_user.id)):
-		return  # ToDo: Return a message?
-	user = update.message.from_user.username
-	bot.send_message(chat_id=update.message.chat_id, text="Hello @{0}, how are you doing today?".format(user))
-
-
-def moon(bot, update):
-	update.message.reply_text(text="Moon mission inbound!")
-
-
-def market_cap(bot, update):
-	pass
-
-
 if __name__ == "__main__":
 	updater = Updater(token=config["telegram-token"])
 	dispatcher = updater.dispatcher
@@ -787,9 +759,6 @@ if __name__ == "__main__":
 	dispatcher.add_handler(CallbackQueryHandler(callback=cmd_help, pattern=r'^help$'))
 	dispatcher.add_handler(CommandHandler('about', cmd_about))
 	dispatcher.add_handler(CallbackQueryHandler(callback=cmd_about, pattern=r'^about$'))
-	# Funny commands
-	dispatcher.add_handler(CommandHandler('moon', moon))
-	dispatcher.add_handler(CommandHandler('hi', hi))
 	# Tipbot commands
 	dispatcher.add_handler(CommandHandler('tip', tip))
 	dispatcher.add_handler(CommandHandler('withdraw', withdraw, pass_args=True))
@@ -797,9 +766,6 @@ if __name__ == "__main__":
 	dispatcher.add_handler(CommandHandler('address', deposit)) # alias for /deposit
 	dispatcher.add_handler(CommandHandler('balance', balance))
 	dispatcher.add_handler(CommandHandler("scavenge", scavenge))
-	# Conversion commands
-	dispatcher.add_handler(CommandHandler('marketcap', marketcap))
-	dispatcher.add_handler(CommandHandler('price', price))
 	# Admin commands
 	dispatcher.add_handler(CommandHandler("send_log", cmd_send_log))
 	dispatcher.add_handler(CommandHandler("get_log", cmd_send_log))
