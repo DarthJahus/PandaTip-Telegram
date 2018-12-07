@@ -18,6 +18,10 @@
 			"Use `/tip <user> <amount>`",
 			"Make sure to correctly tag your the person you are tipping.",
 			"",
+			":cloud_with_rain: You may share with all the active members of a group!",
+			"Use `/rain <amount> [count]`",
+			"Make sure to rain more than the minimum amount, and on enough members.",
+			"",
 			":globe_with_meridians: Need to withdraw to your PandaBank?",
 			"Use `/withdraw <address> <amount>`",
 			"Please double check your address before submitting, as we cannot undo that process.",
@@ -187,6 +191,33 @@
 	"clear_log_done": {
 		"en": [
 			":white_check_mark: Cleared!"
+		]
+	},
+
+	"rain_queue_not_initialized": {
+		"en": [
+			"It can't rain for now as queue is empty.",
+			"Please try again when more people have been active."
+		]
+	},
+
+	"rain_queue_not_enough_members": {
+		"en": [
+			"It can't rain for now as there aren't enough active users.",
+			"Active: `%i (+%i)`",
+			"Required: `%i`"
+		]
+	},
+
+	"rain_queue_min_amount": {
+		"en": [
+			"Can't rain less than `%i %s` per member (demanded: `%i %s`)."
+		]
+	},
+
+	"rain_queue_min_members": {
+		"en": [
+			"Can't rain on less than `%i` members (demanded: `%i`)."
 		]
 	}
 }

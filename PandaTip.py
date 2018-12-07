@@ -19,20 +19,24 @@ from datetime import datetime
 
 
 config = load_file_json("config.json")
-_lang = "en" # ToDo: Per-user language
+_lang = "en"  # ToDo: Per-user language
 strings = Strings("strings.json")
 _paused = False
 _spam_filter = AntiSpamFilter(config["spam_filter"][0], config["spam_filter"][1])
 _rain_queues = {
-	"-1": []
-}  # Dict of "ChatID": [Array of active users]
+	"-1": [("0", "@username", "Name")]
+}
 
 # Constants
 __wallet_rpc = RPCWrapper(PandaRPC(config["rpc-uri"], (config["rpc-user"], config["rpc-psw"])))
-__rain_queue_max_members = 20
 __rain_queue_filter = filters.Filters.group & (
 		filters.Filters.text | filters.Filters.photo | filters.Filters.video | filters.Filters.reply | filters.Filters.forwarded
 	)
+__rain_queue_min_text_length = 10
+__rain_queue_min_words = 2
+__rain_queue_max_members = 30  # Max members in a queue
+__rain_min_members = 5  # 5
+__rain_min_amount = 10
 
 
 # ToDo: Add service commands to check the health of the daemon / wallet.
@@ -380,17 +384,46 @@ def damp_rock(bot, update):
 	:param update: Update
 	:return: None
 	"""
-	# ToDo: Check if group
-	pass
-	# ToDo: Check if not bot
-	pass
-	# ToDo: If text, check length
-	pass
-	# ToDo: Check if in Array
-	pass
-	# ToDo: Update Array
-	# ToDo: Static queue size or dynamic queue (still capped)
-	pass
+	if _paused:
+		return
+	if update.effective_chat is None:
+		return
+	elif update.effective_chat.type not in ["group", "supergroup"]:
+		return
+	#
+	_group_id = str(update.effective_chat.id)
+	if update.effective_user.is_bot:
+		return
+	# Get user_id for the tip command (either @username or else UserID)
+	_username = update.effective_user.username
+	_user_id = str(update.effective_user.id)  # The queue uses real UserID to avoid registering a user twice if user creates @
+	if _username is None:
+		_user_id_local = _user_id
+		_user_readable_name = update.effective_user.name
+	else:
+		_user_id_local = '@' + _username.lower()
+		_user_readable_name = _username
+	if update.effective_message.text is not None:
+		if len(update.effective_message.text) < __rain_queue_min_text_length:
+			return
+		if len(update.effective_message.text.split()) < __rain_queue_min_words:
+			return
+	# Check the queue
+	if _group_id not in _rain_queues:
+		_rain_queues[_group_id] = []
+	# Note: In Python2, Dict doesn't preserve order as in Python3 (see https://stackoverflow.com/questions/14956313)
+	if len(_rain_queues[_group_id]) > 0:
+		# If user has talked last, don't remove it, don't add it.
+		if _rain_queues[_group_id][0][0] == _user_id:  # Don't use "is not", the object will not be the same, only value will
+			return
+		else:
+			# Search for user and remove it (in order to place it first)
+			for _user_data in _rain_queues[_group_id]:
+				if _user_data[0] == _user_id:
+					_rain_queues[_group_id].remove(_user_data)
+					break
+	# Add user to queue (first, since it will be read from first to last)
+	_rain_queues[_group_id].insert(0, (_user_id, _user_id_local, _user_readable_name))
 
 
 def rain(bot, update, args):
@@ -399,8 +432,78 @@ def rain(bot, update, args):
 	if _paused:
 		update.message.reply_text(text=emoji.emojize(strings.get("global_paused"), use_aliases=True), quote=True)
 		return
-	# ToDo: Stuff
-	pass
+	if update.effective_chat is None:
+		return
+	elif update.effective_chat.type not in ["group", "supergroup"]:
+		return
+	#
+	_group_id = str(update.effective_chat.id)
+	_user_id = str(update.effective_user.id)
+	if 0 < len(args) <= 2:  # We may or may not allow text after the first 2 arguments. Probably not.
+		# Check if queue has enough members
+		if _group_id not in _rain_queues:
+			update.message.reply_text(
+				strings.get("rain_queue_not_initialized", _lang),
+				quote=True,
+				parse_mode=ParseMode.MARKDOWN,
+				disable_web_page_preview=True
+			)
+			return
+		# Prepare arguments
+		_rain_amount_demanded = 0
+		_rain_members_demanded = __rain_queue_max_members  # number of members = min(optional args[1], queue_max, queue_len)
+		try:
+			_rain_amount_demanded = int(args[0])
+			if len(args) > 1:
+				_rain_members_demanded = int(args[1])
+		except ValueError:
+			return  # Don't show error. Probably trolling.
+		if _rain_amount_demanded < __rain_min_amount:
+			update.message.reply_text(
+				strings.get("rain_queue_min_amount", _lang) % (__rain_min_amount, "PND", _rain_amount_demanded, "PND"),
+				quote=True,
+				parse_mode=ParseMode.MARKDOWN,
+				disable_web_page_preview=True
+			)
+			return
+		if _rain_members_demanded < __rain_min_members:
+			update.message.reply_text(
+				strings.get("rain_queue_min_members", _lang) % (__rain_min_members, _rain_members_demanded),
+				quote=True,
+				parse_mode=ParseMode.MARKDOWN,
+				disable_web_page_preview=True
+			)
+			return
+		# Check if user is in queue, don't remove user from original queue as recipients array will be created later
+		# Note that using this command doesn't put the user in queue (commands are excluded from damp_rock())
+		_modifier = 0
+		for _user_data in _rain_queues[_group_id]:
+			if _user_data[0] == _user_id:
+				_modifier = -1
+				break
+		# Check if there are enough members in queue (minus user if needed)
+		if len(_rain_queues[_group_id]) + _modifier < __rain_min_members:
+			update.message.reply_text(
+				strings.get("rain_queue_not_enough_members", _lang) % (
+					len(_rain_queues[_group_id]) + _modifier,
+					- _modifier,
+					__rain_min_members
+				),
+				quote=True,
+				parse_mode=ParseMode.MARKDOWN,
+				disable_web_page_preview=True
+			)
+			return
+		# Prepare queue for tips
+		_recipients = []  # Array of LocalUserID
+		_handled = {}  # Dict of LocalUserID: (Readable Name, Unused, Unused)
+		for _user_data in _rain_queues[_group_id]:
+			if _user_data[0] != _user_id:
+				_recipients.append(_user_data[1])  # Local UserID (@username or else UserID)
+				_handled[_user_data[1]] = _user_data[2]
+				if len(_recipients) >= _rain_members_demanded:
+					break
+		do_tip(bot, update, [_rain_amount_demanded], _recipients, _handled)
 
 
 def do_tip(bot, update, amounts_float, recipients, handled):
@@ -807,6 +910,8 @@ def cmd_pause(bot, update):
 		else:
 			_answer = strings.get("pause_answer_resumed")
 		update.message.reply_text(emoji.emojize(_answer, use_aliases=True), quote=True)
+		# Reinitialize rain queues
+		_rain_queues.clear()
 
 
 if __name__ == "__main__":

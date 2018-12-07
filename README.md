@@ -63,5 +63,5 @@ A `pandacoin.conf` file is needed in data directory.
 - [x] Populate `strings.json`
 - [x] Add spam protection
 - [ ] Per-user language
-- ~~[ ] Show fiat equivalent for balance~~
-- ~~[ ] Add `/price` and `/marketcap` commands~~
+- [ ] ~~Show fiat equivalent for balance~~
+- [ ] ~~Add `/price` and `/marketcap` commands~~
