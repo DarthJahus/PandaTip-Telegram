@@ -20,6 +20,7 @@
 			"",
 			":cloud_with_rain: You may share with all the active members of a group!",
 			"Use `/rain <amount> [count]`",
+			"Important: `amount` will be sent to each member, and it will NOT be shared among them.",
 			"Make sure to rain more than the minimum amount, and on enough members.",
 			"",
 			":globe_with_meridians: Need to withdraw to your PandaBank?",
@@ -215,9 +216,9 @@
 		]
 	},
 
-	"rain_queue_min_members": {
+	"rain_queue_min_max_members": {
 		"en": [
-			"Can't rain on less than `%i` members (demanded: `%i`)."
+			"Can't rain on less than `%i` or more than `%i%` members (demanded: `%i`)."
 		]
 	}
 }

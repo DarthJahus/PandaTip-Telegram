@@ -466,9 +466,9 @@ def rain(bot, update, args):
 				disable_web_page_preview=True
 			)
 			return
-		if _rain_members_demanded < __rain_min_members:
+		if _rain_members_demanded < __rain_min_members or _rain_members_demanded > __rain_queue_max_members:
 			update.message.reply_text(
-				strings.get("rain_queue_min_members", _lang) % (__rain_min_members, _rain_members_demanded),
+				strings.get("rain_queue_min_max_members", _lang) % (__rain_min_members, __rain_queue_max_members, _rain_members_demanded),
 				quote=True,
 				parse_mode=ParseMode.MARKDOWN,
 				disable_web_page_preview=True
