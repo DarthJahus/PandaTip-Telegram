@@ -424,6 +424,9 @@ def damp_rock(bot, update):
 					break
 	# Add user to queue (first, since it will be read from first to last)
 	_rain_queues[_group_id].insert(0, (_user_id, _user_id_local, _user_readable_name))
+	# Check if the queue has to be pruned
+	if len(_rain_queues[_group_id]) > __rain_queue_max_members:
+		_rain_queues[_group_id].pop()  # pop(-1). This should be enough to remove the last member, but real pruning would be better
 
 
 def rain(bot, update, args):
