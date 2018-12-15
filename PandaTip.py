@@ -32,11 +32,11 @@ __wallet_rpc = RPCWrapper(PandaRPC(config["rpc-uri"], (config["rpc-user"], confi
 __rain_queue_filter = filters.Filters.group & (
 		filters.Filters.text | filters.Filters.photo | filters.Filters.video | filters.Filters.reply | filters.Filters.forwarded
 	)
-__rain_queue_min_text_length = 10
-__rain_queue_min_words = 2
-__rain_queue_max_members = 30  # Max members in a queue
+__rain_queue_min_text_length = 10  # 10
+__rain_queue_min_words = 2  # 2
+__rain_queue_max_members = 30  # Max members in a queue, 30
 __rain_min_members = 5  # 5
-__rain_min_amount = 10
+__rain_min_amount = 10  # 10
 
 
 # ToDo: Add service commands to check the health of the daemon / wallet.
@@ -318,12 +318,14 @@ def balance(bot, update):
 
 # Done: Rewrite the whole logic; use tags instead of parsing usernames (2018-07-15)
 # Done: Allow private tipping if the user can be tagged (@username available) (Nothing to add for it to work.)
-def tip(bot, update):
+def tip(bot, update, args):
 	"""
 	/tip <user> <amount>
 	/tip u1 u2 u3 ... v1 v2 v3 ...
 	/tip u1 v1 u2 v2 u3 v3 ...
 	"""
+	if len(args) < 2:
+		return  # To avoid the long annoying error message that's shown when users misuse the command
 	if not _spam_filter.verify(str(update.effective_user.id)):
 		return
 	if _paused:
@@ -503,13 +505,14 @@ def rain(bot, update, args):
 		for _user_data in _rain_queues[_group_id]:
 			if _user_data[0] != _user_id:
 				_recipients.append(_user_data[1])  # Local UserID (@username or else UserID)
-				_handled[_user_data[1]] = _user_data[2]
+				_handled[_user_data[1]] = (_user_data[2], None, None)
 				if len(_recipients) >= _rain_members_demanded:
 					break
-		do_tip(bot, update, [_rain_amount_demanded], _recipients, _handled)
+		log("rain", _user_id, "rain (%i over %i members) handed to do_tip()" % (_rain_amount_demanded, len(_recipients)))
+		do_tip(bot, update, [_rain_amount_demanded], _recipients, _handled, verb="rain")
 
 
-def do_tip(bot, update, amounts_float, recipients, handled):
+def do_tip(bot, update, amounts_float, recipients, handled, verb="tip"):
 	"""
 	Send amounts to recipients
 	:param bot: Bot
@@ -517,12 +520,17 @@ def do_tip(bot, update, amounts_float, recipients, handled):
 	:param amounts_float: Array of Float
 	:param recipients: Array of Username or UserID
 	:param handled: Dict of {"username or UserID": (username, entity.offset, entity.length)
+	:param verb: "tip", will be used in "%verb%_success" and "%verb%_missing_recipient" strings
 	:return: None
 	"""
 	#
+	if verb not in ["tip", "rain"]:
+		log("do_tip", "__system__", "Incorrect verb passed to do_tip()")
+		verb = "tip"
 	# Check if only 1 amount is given
-	if len(amounts_float) == 1 and len(recipients) > 1:
-		_amounts_float = amounts_float * len(recipients)
+	_amounts_float = amounts_float
+	if len(_amounts_float) == 1 and len(recipients) > 1:
+		_amounts_float = _amounts_float * len(recipients)
 	# Check if user has enough balance
 	_username = update.effective_user.username
 	if _username is None:
@@ -533,10 +541,10 @@ def do_tip(bot, update, amounts_float, recipients, handled):
 	_rpc_call = __wallet_rpc.getaddressesbyaccount(_user_id)
 	if not _rpc_call["success"]:
 		print("Error during RPC call: %s" % _rpc_call["message"])
-		log("tip", _user_id, "(1) getaddressesbyaccount > Error during RPC call: %s" % _rpc_call["message"])
+		log("do_tip", _user_id, "(1) getaddressesbyaccount > Error during RPC call: %s" % _rpc_call["message"])
 	elif _rpc_call["result"]["error"] is not None:
 		print("Error: %s" % _rpc_call["result"]["error"])
-		log("tip", _user_id, "(1) getaddressesbyaccount > Error: %s" % _rpc_call["result"]["error"])
+		log("do_tip", _user_id, "(1) getaddressesbyaccount > Error: %s" % _rpc_call["result"]["error"])
 	else:
 		_addresses = _rpc_call["result"]["result"]
 		if len(_addresses) == 0:
@@ -548,16 +556,16 @@ def do_tip(bot, update, amounts_float, recipients, handled):
 			_rpc_call = __wallet_rpc.getbalance(_address)
 			if not _rpc_call["success"]:
 				print("Error during RPC call.")
-				log("tip", _user_id, "(2) getbalance > Error during RPC call: %s" % _rpc_call["message"])
+				log("do_tip", _user_id, "(2) getbalance > Error during RPC call: %s" % _rpc_call["message"])
 			elif _rpc_call["result"]["error"] is not None:
 				print("Error: %s" % _rpc_call["result"]["error"])
-				log("tip", _user_id, "(2) getbalance > Error: %s" % _rpc_call["result"]["error"])
+				log("do_tip", _user_id, "(2) getbalance > Error: %s" % _rpc_call["result"]["error"])
 			else:
 				_balance = int(_rpc_call["result"]["result"])
 				# Now, finally, check if user has enough funds (includes tx fee)
-				if sum(amounts_float) > _balance - max(1, int(len(recipients)/3)):
+				if sum(_amounts_float) > _balance - max(1, int(len(recipients)/3)):
 					update.message.reply_text(
-						text="%s `%i PND`" % (strings.get("tip_no_funds", _lang), sum(amounts_float) + max(1, int(len(recipients)/3))),
+						text="%s `%i PND`" % (strings.get("tip_no_funds", _lang), sum(_amounts_float) + max(1, int(len(recipients)/3))),
 						quote=True,
 						parse_mode=ParseMode.MARKDOWN
 					)
@@ -577,21 +585,17 @@ def do_tip(bot, update, amounts_float, recipients, handled):
 							# Done: When requesting a new address, if user has a @username, then use that username (2018-07-16)
 							# Problem: If someone has no username, then later creates one, he loses access to his account
 							# Done: Create a /scavenge command that allows people who had UserID to migrate to UserName (2018-07-16)
-							_recipient_id = _recipient
+							_recipient_id = _recipient.lower()  # Enforce lowercase
 						else:
 							_recipient_id = _recipient
 						# Check if recipient has an address (required for .sendmany()
 						_rpc_call = __wallet_rpc.getaddressesbyaccount(_recipient_id)
 						if not _rpc_call["success"]:
 							print("Error during RPC call.")
-							log(
-								"tip",
-								_user_id,
-								"(3) getaddressesbyaccount(%s) > Error during RPC call: %s" % (_recipient_id, _rpc_call["message"])
-							)
+							log("do_tip", _user_id, "(3) getaddressesbyaccount(%s) > Error during RPC call: %s" % (_recipient_id, _rpc_call["message"]))
 						elif _rpc_call["result"]["error"] is not None:
 							print("Error: %s" % _rpc_call["result"]["error"])
-							log("tip", _user_id, "(3) getaddressesbyaccount(%s) > Error: %s" % (_recipient_id, _rpc_call["result"]["error"]))
+							log("do_tip", _user_id, "(3) getaddressesbyaccount(%s) > Error: %s" % (_recipient_id, _rpc_call["result"]["error"]))
 						else:
 							_address = None
 							_addresses = _rpc_call["result"]["result"]
@@ -600,17 +604,10 @@ def do_tip(bot, update, amounts_float, recipients, handled):
 								_rpc_call = __wallet_rpc.getaccountaddress(_recipient_id)
 								if not _rpc_call["success"]:
 									print("Error during RPC call.")
-									log("tip", _user_id,
-										"(4) getaccountaddress(%s) > Error during RPC call: %s" % (
-											_recipient_id, _rpc_call["message"]
-										)
-									)
+									log("do_tip", _user_id, "(4) getaccountaddress(%s) > Error during RPC call: %s" % (_recipient_id, _rpc_call["message"]))
 								elif _rpc_call["result"]["error"] is not None:
 									print("Error: %s" % _rpc_call["result"]["error"])
-									log("tip", _user_id, "(4) getaccountaddress(%s) > Error: %s" % (
-											_recipient_id, _rpc_call["result"]["error"]
-										)
-									)
+									log("do_tip", _user_id, "(4) getaccountaddress(%s) > Error: %s" % (_recipient_id, _rpc_call["result"]["error"]))
 								else:
 									_address = _rpc_call["result"]["result"]
 							else:
@@ -618,7 +615,7 @@ def do_tip(bot, update, amounts_float, recipients, handled):
 								_address = _addresses[0]
 						if _address is not None:
 							# Because recipient has an address, we can add him to the dict
-							_tip_dict[_recipient_id] = amounts_float[i]
+							_tip_dict[_recipient_id] = _amounts_float[i]
 						i += 1
 					#
 					# Check if there are users left to tip
@@ -631,20 +628,20 @@ def do_tip(bot, update, amounts_float, recipients, handled):
 					_rpc_call = __wallet_rpc.sendmany(_user_id, _tip_dict)
 					if not _rpc_call["success"]:
 						print("Error during RPC call.")
-						log("tip", _user_id, "(4) sendmany > Error during RPC call: %s" % _rpc_call["message"])
+						log("do_tip", _user_id, "(4) sendmany > Error during RPC call: %s" % _rpc_call["message"])
 					elif _rpc_call["result"]["error"] is not None:
 						print("Error: %s" % _rpc_call["result"]["error"])
-						log("tip", _user_id, "(4) sendmany > Error: %s" % _rpc_call["result"]["error"])
+						log("do_tip", _user_id, "(4) sendmany > Error: %s" % _rpc_call["result"]["error"])
 					else:
 						_tx = _rpc_call["result"]["result"]
 						_suppl = ""
 						if len(_tip_dict) != len(recipients):
-							_suppl = "\n\n_%s_" % strings.get("tip_missing_recipient", _lang)
+							_suppl = "\n\n_%s_" % strings.get("%s_missing_recipient" % verb, _lang)
 						update.message.reply_text(
 							text = "*%s* %s\n%s\n\n[tx %s](%s)%s" % (
 								update.effective_user.name,
-								strings.get("tip_success", _lang),
-								''.join((("\n- `%3.0f PND ` to *%s*" % (_tip_dict[_recipient_id], handled[_recipient_id][0])) for _recipient_id in _tip_dict)),
+								strings.get("%s_success" % verb, _lang),
+								''.join((("\n- `%3.0f PND ` %s *%s*" % (_tip_dict[_recipient_id], strings.get("%s_preposition" % verb, _lang), handled[_recipient_id][0])) for _recipient_id in _tip_dict)),
 								_tx[:4] + "..." + _tx[-4:],
 								"https://chainz.cryptoid.info/pnd/tx.dws?" + _tx,
 								_suppl
@@ -927,7 +924,7 @@ if __name__ == "__main__":
 	dispatcher.add_handler(CommandHandler("about", cmd_about))
 	dispatcher.add_handler(CallbackQueryHandler(callback=cmd_about, pattern=r'^about$'))
 	# Tipbot commands
-	dispatcher.add_handler(CommandHandler("tip", tip))
+	dispatcher.add_handler(CommandHandler("tip", tip, pass_args=True))
 	dispatcher.add_handler(CommandHandler("withdraw", withdraw, pass_args=True))
 	dispatcher.add_handler(CommandHandler("deposit", deposit))
 	dispatcher.add_handler(CommandHandler("address", deposit)) # alias for /deposit

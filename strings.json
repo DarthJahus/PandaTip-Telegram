@@ -157,11 +157,16 @@
 	"tip_error_arguments": {
 		"en": [
 			"There was an error in your tip.",
-			"- All recipients need to be *unique* and *properly tagged*;",
-			"- Amounts have to be *numbers* (not real pandas);",
-			"- Number of recipients needs to be the *same* as the number of provided amounts;",
-			" (You can enter one amount that will be applied to all recipients.)"
-		]	
+			"- Recipients should be *unique* and *properly tagged*;",
+			"- Amounts should be *numbers* (not real pandas);",
+			"- Provide *an amount per recipient* or *one unique* for all of them."
+		]
+	},
+
+	"tip_preposition": {
+		"en": [
+			"to"
+		]
 	},
 	
 	"withdraw_no_funds": {
@@ -219,6 +224,24 @@
 	"rain_queue_min_max_members": {
 		"en": [
 			"Can't rain on less than `%i` or more than `%i%` members (demanded: `%i`)."
+		]
+	},
+
+	"rain_success": {
+		"en": [
+			"successfully rained:"
+		]
+	},
+
+	"rain_missing_recipient": {
+		"en": [
+			"Some users couldn't be rained upon. Reasons..."
+		]
+	},
+
+	"rain_preposition": {
+		"en": [
+			"on"
 		]
 	}
 }
